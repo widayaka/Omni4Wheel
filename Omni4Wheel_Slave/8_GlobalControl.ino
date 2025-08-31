@@ -1,3 +1,5 @@
+#include "9_SerialPrintWrapper.h"
+
 float setPointMotor[NUM_OF_MOTORS];
 float motor_p;
 float motor_i;
@@ -7,6 +9,8 @@ float motor_d;
 float spXPos = 0;
 float spYPos = 0;
 float spThPos = 0;
+float maxSpeedRobotLin = 0;
+float maxSpeedRobotAng = 0;
 bool statusGoalReached = false;
 float KpCP = 100;
 
@@ -19,18 +23,34 @@ void setPIDMotor(float kp, float ki, float kd){
   motor_d = kd;
 }
 
-void setRobotPosition(float x, float y, float w) {
+void setRobotPosition(float x, float y, float w, float maxSpeedLin, float maxSpeedAng) {
   spXPos = x;
   spYPos = y;
   spThPos = w;
+  maxSpeedRobotLin = maxSpeedLin;
+  maxSpeedRobotAng = maxSpeedAng;
+}
+
+void checkSetPointMotor(){
+  SerialPrint("%.1f %.1f %.1f %.1f", setPointMotor[0], setPointMotor[1], setPointMotor[2], setPointMotor[3]);
+//  Serial.println(setPointMotor[0]);
 }
 
 void setRobotSpeed(float x, float y, float w) {
   drive(x, y, w, OFFSET_HEADING, NUM_OF_MOTORS, R_WHEEL, R_ROBOT, setPointMotor);
 }
 
-void setMotorRPM(int motor[NUM_OF_MOTOR]) {
-  memcpy(setPoinMotor, motor, sizeof(motor));
+//void setMotorRPM(float motor[NUM_OF_MOTORS]) {
+//  memcpy(setPointMotor, motor, sizeof(motor));
+//}
+
+void setMotorRPM(float m1, float m2, float m3, float m4) {
+  Serial.println("Setting Motor RPM");
+  setPointMotor[0] = m1;
+  setPointMotor[1] = m2;
+  setPointMotor[2] = m3;
+  setPointMotor[3] = m4;
+  checkSetPointMotor();
 }
 
 void globalMotorControl() {
@@ -41,7 +61,7 @@ void globalMotorControl() {
   float del_angle = 360.0f / NUM_OF_MOTORS;
 
   for (int i = 0; i < NUM_OF_MOTORS; i++) {
-    error[i] = (setPoinMotor[i] - encoder_velocity[i]);
+    error[i] = (setPointMotor[i] - encoder_velocity[i]);
     P[i] = error[i] * motor_p;
     I[i] += error[i] * motor_i;
     D[i] = (error[i] - lastError[i]) * motor_d;
@@ -80,20 +100,22 @@ void globalPositionControl() {
   float P = deltaD * KpCP;
   float PID_V = P;
 
-  if (PID_V > velocity) PID_V = velocity;
+  if (PID_V > maxSpeedRobotLin) PID_V = maxSpeedRobotLin;
 
   P_theta = KP_theta * errorPosTheta;
   I_theta = I_theta + errorPosTheta * KI_theta;
   D_theta = (errorPosTheta - lastErrorPosTheta) * KD_theta;
   PID_theta = P_theta + I_theta + D_theta;
+  if(PID_theta > maxSpeedRobotAng) PID_theta = maxSpeedRobotAng;
+  if(PID_theta < -maxSpeedRobotAng) PID_theta = -maxSpeedRobotAng;
 
   VelocityRobotX = PID_V * errorPosXAxis / deltaD;
   VelocityRobotY = PID_V * errorPosYAxis / deltaD;
-  VelocityRobotZ = 0;
+  VelocityRobotZ = 0; // nanti diganti dengan PID_
 
-  if (VelocityRobotX > velocity) VelocityRobotX = velocity;
-  if (VelocityRobotY > velocity) VelocityRobotY = velocity;
-  if (VelocityRobotZ > velocity) VelocityRobotZ = velocity;
+//  if (VelocityRobotX > velocity) VelocityRobotX = velocity;
+//  if (VelocityRobotY > velocity) VelocityRobotY = velocity;
+//  if (VelocityRobotZ > velocity) VelocityRobotZ = velocity;
 
   setRobotSpeed(VelocityRobotX, VelocityRobotY, VelocityRobotZ);
 }

@@ -29,6 +29,8 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include "9_SerialPrintWrapper.h"
+#include "8_GlobalCOntrol.h"
 
 #define PUSH_BUTTON_OK_IS_PRESSED   digitalRead(PB_OK) == LOW
 #define PUSH_BUTTON_DOWN_IS_PRESSED digitalRead(PB_DOWN) == LOW
@@ -72,6 +74,12 @@ int PB_OK = 15;
 int16_t DistanceTravelledByWheel[NUM_OF_MOTORS];
 
 float speed_motor_encoder[NUM_OF_MOTORS];
+
+int16_t encoder_cnt[NUM_OF_MOTORS];
+int16_t encoder_prev_cnt[NUM_OF_MOTORS];
+int16_t encoder_last_cnt[NUM_OF_MOTORS];
+int16_t encoder_velocity[NUM_OF_MOTORS];
+int16_t encoder_velocity_monitor[NUM_OF_MOTORS];
 
 float P[NUM_OF_MOTORS], P_w[NUM_OF_MOTORS],
       I[NUM_OF_MOTORS], I_w[NUM_OF_MOTORS],
@@ -236,7 +244,7 @@ void onTimerInterrupt20ms() { //control loop
   // kontrol motor
   globalMotorControl();
   // kontrol posisi
-  globalPositionCControl();
+  globalPositionControl();
 }
 
 void setup() {
@@ -286,12 +294,16 @@ void setup() {
   for(int i = 0; i < NUM_OF_MOTORS; i++){encoder_cnt[i] = 0;}
   previousTime_odom = millis();
   RobotBootScreen();
-  // int a[] = {100,200,300,400};
-  // setMotorRPM(a);
+   float a[] = {100,200,300,400};
+   setMotorRPM(100, 200, 300, 400);
+   enableMotorControl = false;
 }
 
 void loop() {
-  SerialPrint("%.1f %.1f %.1f %.1f", setPointMotor[0], setPointMotor[1], setPointMotor[2], setPointMotor[3]);
+  checkSetPointMotor();
+  delay(1000);
+//  Serial.println("test");
+  
 //  while (menu == 0) {RobotHomeScreen();}
 //  while (menu == 1) {RobotMenuEncoder();}
 //  while (menu == 2) {RobotMenuMotor();}

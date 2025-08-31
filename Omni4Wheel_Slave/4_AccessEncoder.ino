@@ -1,8 +1,8 @@
-int16_t encoder_cnt[NUM_OF_MOTORS];
-int16_t encoder_prev_cnt[NUM_OF_MOTORS];
-int16_t encoder_last_cnt[NUM_OF_MOTORS];
-int16_t encoder_velocity[NUM_OF_MOTORS];
-int16_t encoder_velocity_monitor[NUM_OF_MOTORS];
+extern int16_t encoder_cnt[NUM_OF_MOTORS];
+extern int16_t encoder_prev_cnt[NUM_OF_MOTORS];
+extern int16_t encoder_last_cnt[NUM_OF_MOTORS];
+extern int16_t encoder_velocity[NUM_OF_MOTORS];
+extern int16_t encoder_velocity_monitor[NUM_OF_MOTORS];
 
 void encoder1_ISR(){
   VAL_ENC_1A = digitalRead(PIN_ENC_1A);

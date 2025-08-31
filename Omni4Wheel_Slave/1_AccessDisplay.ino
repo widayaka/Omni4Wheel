@@ -7,7 +7,6 @@ void RobotBootScreen(){
 }
 
 void RobotHomeScreen(){
-  Serial.println(test);
   sendDataEncoder1 = encoder_cnt[0]; sendDataEncoder2 = encoder_cnt[1];
   sendDataEncoder3 = encoder_cnt[2]; sendDataEncoder4 = encoder_cnt[3];
 

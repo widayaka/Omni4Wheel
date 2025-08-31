@@ -1,4 +1,6 @@
 #include <stdarg.h>
+#include <cstdio> 
+#include <Arduino.h>
 
 void SerialPrint(const char* format, ...) {
   char buffer[256];
