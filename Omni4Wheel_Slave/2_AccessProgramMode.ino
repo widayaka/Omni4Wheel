@@ -66,7 +66,7 @@ void RobotOdometry(){
   
   display.display();
   
-  if (flag_20ms){flag_20ms = false; odometryTimerLoop();}
+//  if (flag_20ms){flag_20ms = false; odometryTimerLoop();}
   setRobotPosition(2, 4, setPointYaw, 100, 10);
 
   if (SerialData[0] == 0 || SerialData[0] == 1) menu = 0;

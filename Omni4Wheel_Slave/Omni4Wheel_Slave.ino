@@ -30,7 +30,10 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include "9_SerialPrintWrapper.h"
-#include "8_GlobalCOntrol.h"
+#include "8_GlobalControl.h"
+#include "4_AccessEncoder.h"
+#include "6_AccessKinematics.h"
+#include "5_AccessMotor.h"
 
 #define PUSH_BUTTON_OK_IS_PRESSED   digitalRead(PB_OK) == LOW
 #define PUSH_BUTTON_DOWN_IS_PRESSED digitalRead(PB_DOWN) == LOW
@@ -75,11 +78,11 @@ int16_t DistanceTravelledByWheel[NUM_OF_MOTORS];
 
 float speed_motor_encoder[NUM_OF_MOTORS];
 
-int16_t encoder_cnt[NUM_OF_MOTORS];
-int16_t encoder_prev_cnt[NUM_OF_MOTORS];
-int16_t encoder_last_cnt[NUM_OF_MOTORS];
-int16_t encoder_velocity[NUM_OF_MOTORS];
-int16_t encoder_velocity_monitor[NUM_OF_MOTORS];
+//int16_t encoder_cnt[NUM_OF_MOTORS];
+//int16_t encoder_prev_cnt[NUM_OF_MOTORS];
+//int16_t encoder_last_cnt[NUM_OF_MOTORS];
+//int16_t encoder_velocity[NUM_OF_MOTORS];
+//int16_t encoder_velocity_monitor[NUM_OF_MOTORS];
 
 float P[NUM_OF_MOTORS], P_w[NUM_OF_MOTORS],
       I[NUM_OF_MOTORS], I_w[NUM_OF_MOTORS],
@@ -161,29 +164,29 @@ int PIN_MOT_1A = 23;
 int PIN_MOT_1B = 19;
 int PIN_ENC_1A = 36;
 int PIN_ENC_1B = 39;
-int VAL_ENC_1A = 0;
-int VAL_ENC_1B = 0;
+volatile int VAL_ENC_1A = 0;
+volatile int VAL_ENC_1B = 0;
 
 int PIN_MOT_2A = 18;
 int PIN_MOT_2B = 4;
 int PIN_ENC_2A = 34;
 int PIN_ENC_2B = 35;
-int VAL_ENC_2A = 0;
-int VAL_ENC_2B = 0;
+volatile int VAL_ENC_2A = 0;
+volatile int VAL_ENC_2B = 0;
 
 int PIN_MOT_3A = 2;
 int PIN_MOT_3B = 13;
 int PIN_ENC_3A = 32;
 int PIN_ENC_3B = 33;
-int VAL_ENC_3A = 0;
-int VAL_ENC_3B = 0;
+volatile int VAL_ENC_3A = 0;
+volatile int VAL_ENC_3B = 0;
 
 int PIN_MOT_4A = 14;
 int PIN_MOT_4B = 27;
 int PIN_ENC_4A = 25;
 int PIN_ENC_4B = 26;
-int VAL_ENC_4A = 0;
-int VAL_ENC_4B = 0;
+volatile int VAL_ENC_4A = 0;
+volatile int VAL_ENC_4B = 0;
 
 int frequency=5000,
     resolution=8,
@@ -236,7 +239,7 @@ hw_timer_t *timer20ms = NULL;
 volatile bool flag_20ms = false;
 void IRAM_ATTR onTimer() {flag_20ms = true;}
 
-void onTimerInterrupt20ms() { //control loop
+void IRAM_ATTR onTimerInterrupt20ms() { //control loop
   // get Motor RPM
   encoderAll_RPM();
   // odometry
@@ -244,7 +247,7 @@ void onTimerInterrupt20ms() { //control loop
   // kontrol motor
   globalMotorControl();
   // kontrol posisi
-  globalPositionControl();
+//  globalPositionControl();
 }
 
 void setup() {
@@ -294,15 +297,15 @@ void setup() {
   for(int i = 0; i < NUM_OF_MOTORS; i++){encoder_cnt[i] = 0;}
   previousTime_odom = millis();
   RobotBootScreen();
-   float a[] = {100,200,300,400};
-   setMotorRPM(100, 200, 300, 400);
-   enableMotorControl = false;
-   enablePositionControl = false;
+  setMotorRPM(10, 10, 10, 10);
+//   enableMotorControl = false;
+  enablePositionControl = false;
 }
 
 void loop() {
   checkSetPointMotor();
-  delay(1000);
+  SerialPrint("%d %d %d %d", encoder_velocity[0], encoder_velocity[1], encoder_velocity[2], encoder_velocity[3]);
+  delay(10);
 //  Serial.println("test");
   
 //  while (menu == 0) {RobotHomeScreen();}

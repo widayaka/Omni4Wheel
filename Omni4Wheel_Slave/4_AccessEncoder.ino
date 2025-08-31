@@ -1,8 +1,8 @@
-extern int16_t encoder_cnt[NUM_OF_MOTORS];
-extern int16_t encoder_prev_cnt[NUM_OF_MOTORS];
-extern int16_t encoder_last_cnt[NUM_OF_MOTORS];
-extern int16_t encoder_velocity[NUM_OF_MOTORS];
-extern int16_t encoder_velocity_monitor[NUM_OF_MOTORS];
+volatile int16_t encoder_cnt[4];
+volatile int16_t encoder_prev_cnt[4];
+volatile int16_t encoder_last_cnt[4];
+volatile int16_t encoder_velocity[4];
+volatile int16_t encoder_velocity_monitor[4];
 
 void encoder1_ISR(){
   VAL_ENC_1A = digitalRead(PIN_ENC_1A);
@@ -68,7 +68,7 @@ void encoder4_RPM(){
   }
 }
 
-void encoderAll_RPM(){
+void IRAM_ATTR encoderAll_RPM(){
   currentTime = millis();
   if (currentTime - previousTime >= interval){
     previousTime = currentTime;

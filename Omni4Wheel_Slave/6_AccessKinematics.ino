@@ -31,7 +31,7 @@ float m_odometry[2][4] = {
     {0.010607f, -0.010607f, -0.010607f, 0.010607f}
 };
 
-void drive(float x, float y, float w, float headingOffset, int n, float wheelRadius, float robotRadius, float* motorOutput) {
+void IRAM_ATTR drive(float x, float y, float w, float headingOffset, int n, float wheelRadius, float robotRadius, float* motorOutput) {
   float del_angle = 360.0f / n;
 
   for (int i = 0; i < n; i++) {
@@ -126,7 +126,7 @@ void InverseKinematicsNoPID(float speed_global_x, float speed_global_y, float sp
 //  display.display();
 //}
 
-void robotOodometry(float MI[2][4], float T[4], float angle, float output[2]) {
+void IRAM_ATTR robotOodometry(float MI[2][4], float T[4], float angle, float output[2]) {
     float rad = angle * PI / 180.0f; 
     
     float R[2][2] = {
@@ -152,7 +152,7 @@ void robotOodometry(float MI[2][4], float T[4], float angle, float output[2]) {
     }
 }
 
-void odometryTimerLoop(){
+void IRAM_ATTR odometryTimerLoop(){
   currentTime_odom = millis();
   deltaTime_odom = currentTime_odom - previousTime_odom;
   float dt = deltaTime_odom / 1000.0f;

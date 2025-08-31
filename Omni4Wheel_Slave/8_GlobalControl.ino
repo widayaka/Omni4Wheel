@@ -33,10 +33,13 @@ void setRobotPosition(float x, float y, float w, float maxSpeedLin, float maxSpe
 
 void checkSetPointMotor(){
   SerialPrint("%.1f %.1f %.1f %.1f", setPointMotor[0], setPointMotor[1], setPointMotor[2], setPointMotor[3]);
-//  Serial.println(setPointMotor[0]);
 }
 
-void setRobotSpeed(float x, float y, float w) {
+//void checkMotorControl(){
+//  SerialPrint("%.1f %.1f %.1f %.1f", setPointMotor[0], setPointMotor[1], setPointMotor[2], setPointMotor[3]);
+//}
+
+void IRAM_ATTR setRobotSpeed(float x, float y, float w) {
   drive(x, y, w, OFFSET_HEADING, NUM_OF_MOTORS, R_WHEEL, R_ROBOT, setPointMotor);
 }
 
@@ -45,19 +48,17 @@ void setRobotSpeed(float x, float y, float w) {
 //}
 
 void setMotorRPM(float m1, float m2, float m3, float m4) {
-  Serial.println("Setting Motor RPM");
   setPointMotor[0] = m1;
   setPointMotor[1] = m2;
   setPointMotor[2] = m3;
   setPointMotor[3] = m4;
-  checkSetPointMotor();
 }
 
-void globalMotorControl() {
-  if (!enableMotorControl) return;
+static float error[NUM_OF_MOTORS] = {0};
+static float lastError[NUM_OF_MOTORS] = {0};
 
-  static float error[NUM_OF_MOTORS] = {0};
-  static float lastError[NUM_OF_MOTORS] = {0};
+void IRAM_ATTR globalMotorControl() {
+  if (!enableMotorControl) return;
   float del_angle = 360.0f / NUM_OF_MOTORS;
 
   for (int i = 0; i < NUM_OF_MOTORS; i++) {
@@ -81,7 +82,7 @@ void globalMotorControl() {
   DriveMotor(PIDForRPM[0], PIDForRPM[1], PIDForRPM[2], PIDForRPM[3]);
 }
 
-void globalPositionControl() {
+void IRAM_ATTR globalPositionControl() {
   if(!enablePositionControl) return;
   
   errorPosXAxis = spXPos - RobotActualPositionX;
