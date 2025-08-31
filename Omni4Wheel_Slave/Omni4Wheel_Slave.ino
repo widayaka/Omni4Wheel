@@ -285,11 +285,12 @@ void setup() {
   for(int i = 0; i < NUM_OF_MOTORS; i++){encoder_cnt[i] = 0;}
   previousTime_odom = millis();
   RobotBootScreen();
-  int x = 
-  setMotorRPM([100,200,300,400]);
+  int a[] = {100,200,300,400};
+  setMotorRPM(a);
 }
 
 void loop() {
+  SerialPrint("%.1f %.1f %.1f %.1f", setPointMotor[0], setPointMotor[1], setPointMotor[2], setPointMotor[3]);
 //  while (menu == 0) {RobotHomeScreen();}
 //  while (menu == 1) {RobotMenuEncoder();}
 //  while (menu == 2) {RobotMenuMotor();}
