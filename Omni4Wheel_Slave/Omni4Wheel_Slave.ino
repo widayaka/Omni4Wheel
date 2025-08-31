@@ -282,39 +282,40 @@ void setup() {
 }
 
 void loop() {
-//  while (menu == 0) {RobotHomeScreen();}
-//  while (menu == 1) {RobotMenuEncoder();}
-//  while (menu == 2) {RobotMenuMotor();}
+  while (menu == 0) {RobotHomeScreen();}
+  while (menu == 1) {RobotMenuEncoder();}
+  while (menu == 2) {RobotMenuMotor();}
+
+  while (menu == 6) {RobotOdometry();}
+  while (menu == 7) {RobotHoldPosition();}
+  while (menu == 8) {RobotJoystickControl();}
+  while (menu == 9) {RobotOdometry();}
+
+//  if (flag_20ms) {flag_20ms = false; odometryTimerLoop();}
+//  setRobotPosition(10,0,0,50);
+//RobotOdometry();
+
+//  Serial.print(theta_dot[0]); Serial.print("\t");
+//  Serial.print(theta_dot[1]); Serial.print("\t");
+//  Serial.print(theta_dot[2]); Serial.print("\t");
+//  Serial.print(theta_dot[3]); Serial.print("\t");
 //
-//  while (menu == 6) {RobotOdometry();}
-//  while (menu == 7) {RobotHoldPosition();}
-//  while (menu == 8) {RobotJoystickControl();}
-//  while (menu == 9) {RobotOdometry();}
+//  Serial.print(velocity_wheel[0],2); Serial.print("\t");
+//  Serial.print(velocity_wheel[1],2); Serial.print("\t");
+//  Serial.print(velocity_wheel[2],2); Serial.print("\t");
+//  Serial.print(velocity_wheel[3],2); Serial.print("\t");
+//
+//  Serial.print(velocity_robot[0],2); Serial.print("\t");
+//  Serial.print(velocity_robot[1],2); Serial.print("\t");
+//
+//  Serial.print(v_robot_l_x); Serial.print("\t");
+//  Serial.print(RobotActualPositionTheta); Serial.print("\t");
+//
+//  Serial.print(RobotActualPositionX); Serial.print("\t");
+//  Serial.print(RobotActualPositionY); Serial.print("\t");
+//  Serial.println();
 
-  if (flag_20ms) {flag_20ms = false; odometryTimerLoop();}
-//  setRobotPosition(1,0,0,50);
-
-  Serial.print(theta_dot[0]); Serial.print("\t");
-  Serial.print(theta_dot[1]); Serial.print("\t");
-  Serial.print(theta_dot[2]); Serial.print("\t");
-  Serial.print(theta_dot[3]); Serial.print("\t");
-
-  Serial.print(velocity_wheel[0],2); Serial.print("\t");
-  Serial.print(velocity_wheel[1],2); Serial.print("\t");
-  Serial.print(velocity_wheel[2],2); Serial.print("\t");
-  Serial.print(velocity_wheel[3],2); Serial.print("\t");
-
-  Serial.print(velocity_robot[0],2); Serial.print("\t");
-  Serial.print(velocity_robot[1],2); Serial.print("\t");
-
-  Serial.print(v_robot_l_x); Serial.print("\t");
-  Serial.print(v_robot_l_y); Serial.print("\t");
-
-  Serial.print(RobotActualPositionX); Serial.print("\t");
-  Serial.print(RobotActualPositionY); Serial.print("\t");
-  Serial.println();
-
-  delay(100);
+//  delay(100);
 
 //InverseKinematicsNoPID(10,0,0,50,OFFSET_HEADING,NUM_OF_MOTORS,R_WHEEL,R_ROBOT); //robot bergerak ke kanan (sumbu x+)
 //delay(500);

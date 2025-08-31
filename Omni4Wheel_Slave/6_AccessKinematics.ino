@@ -146,24 +146,24 @@ void odometryTimerLoop(){
   
   for (int i = 0; i < NUM_OF_MOTORS; i++){
     delta_encoder[i] = encoder_cnt[i] - encoder_last_cnt[i];
-    theta_dot[i] = delta_encoder[i] / (float) deltaTime_odom / ENCODER_PPR * 2 * PI;
-//    theta_dot[i] = (delta_encoder[i] / ENCODER_PPR) * 2.0 * PI / dt;
+//    theta_dot[i] = delta_encoder[i] / (float) deltaTime_odom / ENCODER_PPR * 2 * PI;
+    theta_dot[i] = (delta_encoder[i] / ENCODER_PPR) * 2.0 * PI / dt;
     velocity_wheel[i] = theta_dot[i] * R_WHEEL;
   }
 
   robotOodometry(m_odometry, velocity_wheel, RobotActualPositionTheta, velocity_robot);
 
-  v_robot_l_x = -velocity_robot[0] * sinf(RobotActualPositionTheta * 2 * PI / 180);
-  v_robot_l_y = -velocity_robot[1] * cosf(RobotActualPositionTheta * 2 * PI / 180);
+  v_robot_l_x = velocity_robot[0];
+  v_robot_l_y = velocity_robot[1];
   
-  RobotActualPositionX += v_robot_l_x * deltaTime_odom;
-  RobotActualPositionY += v_robot_l_y * deltaTime_odom;
+//  RobotActualPositionX += v_robot_l_x * deltaTime_odom;
+//  RobotActualPositionY += v_robot_l_y * deltaTime_odom;
 
 //  float theta_radian = RobotActualPositionTheta * 2 * PI / 180.0f;
 //  v_robot_l_x = -velocity_robot[0] * cosf(theta_radian) - velocity_robot[1] * sinf(theta_radian);
 //  v_robot_l_y = -velocity_robot[0] * sinf(theta_radian) + velocity_robot[1] * cosf(theta_radian);
-//  RobotActualPositionX += v_robot_l_x * dt;
-//  RobotActualPositionY += v_robot_l_y * dt;
+  RobotActualPositionX += v_robot_l_x * dt;
+  RobotActualPositionY += v_robot_l_y * dt;
 
   previousTime_odom = currentTime_odom;
   for (int i = 0; i < NUM_OF_MOTORS; i++){encoder_last_cnt[i] = encoder_cnt[i];}
@@ -263,6 +263,4 @@ void setRobotPosition(float setPointPosX, float setPointPosY, float setPointPosT
   Serial.print(PID_theta); Serial.print("\t");
   Serial.println();
   delay(20);
-  
-  
 }
