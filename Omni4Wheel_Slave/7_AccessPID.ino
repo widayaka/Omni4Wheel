@@ -33,17 +33,12 @@ void SetPIDGainOdomTheta(float kp, float ki, float kd){
   KD_theta = kd;
 }
 
-void SetPointRPM(int speed1, int speed2, int speed3, int speed4){
-  setPoint_velocity_monitor[0] = speed1;
-  setPoint_velocity_monitor[1] = speed1;
-  setPoint_velocity_monitor[2] = speed1;
-  setPoint_velocity_monitor[3] = speed1;
-
-  setPoint_velocity[0] = speed1;
-  setPoint_velocity[1] = speed2;
-  setPoint_velocity[2] = speed3;
-  setPoint_velocity[3] = speed4;
-}
+//void SetPointRPM(int speed1, int speed2, int speed3, int speed4){
+//  setPoint_velocity[0] = speed1;
+//  setPoint_velocity[1] = speed2;
+//  setPoint_velocity[2] = speed3;
+//  setPoint_velocity[3] = speed4;
+//}
 
 void SetMotorRPM(int speed1, int speed2, int speed3, int speed4){
   motor1(speed1);

@@ -39,9 +39,9 @@ void InverseKinematicsNoPID(float speed_global_x, float speed_global_y, float sp
     float angleDeg = del_angle * i + offset_heading;
     float angleRad = angleDeg * PI / 180.0f;
     
-    motor[i] = (-sinf(angleRad) * speed_global_x) / R_WHEEL;
-    motor[i] += (cosf(angleRad) * speed_global_y) / R_WHEEL;
-    motor[i] += (R_ROBOT * speed_angular_w) / R_WHEEL;
+    motor[i] = (-sinf(angleRad) * speed_global_x) / wheelRadius;
+    motor[i] += (cosf(angleRad) * speed_global_y) / wheelRadius;
+    motor[i] += (robotRadius * speed_angular_w) / wheelRadius;
 
     if (motor[i] > maxSpeed)  motor[i] = maxSpeed;
     if (motor[i] < -maxSpeed) motor[i] = -maxSpeed;
@@ -56,7 +56,7 @@ void InverseKinematicsNoPID(float speed_global_x, float speed_global_y, float sp
              motor[3]);
 }
 
-void InverseKinematicsWithPID(float x, float y, float w, float offset_heading, int number_of_wheels){
+void InverseKinematicsWithPID(float speed_global_x, float speed_global_y, float speed_angular_w, float maxSpeed, float offset_heading, int number_of_wheels, float wheelRadius, float robotRadius){
   float del_angle = 360.0f / number_of_wheels;
   float motor[number_of_wheels];
   
@@ -67,12 +67,12 @@ void InverseKinematicsWithPID(float x, float y, float w, float offset_heading, i
     float angleRad = angleDeg * PI / 180.0f;
     
     encoderAll_RPM();
-    motor[i] = (-x * sinf(angleRad)) / R_WHEEL;
-    motor[i] += (y * cosf(angleRad)) / R_WHEEL;
-    motor[i] += (w * R_ROBOT) / R_WHEEL;
+    motor[i] = (-speed_global_x * sinf(angleRad)) / wheelRadius;
+    motor[i] += (speed_global_y * cosf(angleRad)) / wheelRadius;
+    motor[i] += (speed_angular_w * robotRadius) / wheelRadius;
       
-    if (motor[i] > 255)  motor[i] = 255;
-    if (motor[i] < -255) motor[i] = -255;
+    if (motor[i] > maxSpeed)  motor[i] = maxSpeed;
+    if (motor[i] < -maxSpeed) motor[i] = -maxSpeed;
 
     error[i] = (motor[i] - encoder_velocity[i]);
     P[i] = error[i] * motor_p;
@@ -169,6 +169,8 @@ void odometryTimerLoop(){
   for (int i = 0; i < NUM_OF_MOTORS; i++){encoder_last_cnt[i] = encoder_cnt[i];}
 }
 
+float KpCP = 100;
+
 void setRobotPosition(float setPointPosX, float setPointPosY, float setPointPosTheta, float velocity){
   errorPosXAxis = setPointPosX - RobotActualPositionX;
   errorPosYAxis = setPointPosY - RobotActualPositionY;
@@ -180,87 +182,97 @@ void setRobotPosition(float setPointPosX, float setPointPosY, float setPointPosT
   DistanceTravelledByRobot = sqrt((errorPosXAxis*errorPosXAxis) + (errorPosYAxis*errorPosYAxis));
   float heading = atan2(errorPosYAxis,errorPosXAxis);
 
-  P_xAxis = KP_xAxis * DistanceTravelledByRobot;
-//  P_xAxis = KP_xAxis * errorPosXAxis;
-  I_xAxis = I_xAxis + errorPosXAxis * KI_xAxis;
-  D_xAxis = (errorPosXAxis - lastErrorPosXAxis) * KD_xAxis;
-  PID_xAxis = P_xAxis + I_xAxis + D_xAxis;
+  float P = DistanceTravelledByRobot * KpCP;
+  float PID_V = P;
+
+  if(PID_V > velocity)PID_V = velocity;
   
-  P_yAxis = KP_yAxis * DistanceTravelledByRobot;
-//  P_yAxis = KP_yAxis * errorPosYAxis;
-  I_yAxis = I_yAxis + errorPosYAxis * KI_yAxis;
-  D_yAxis = (errorPosYAxis - lastErrorPosYAxis) * KD_yAxis;
-  PID_yAxis = P_yAxis + I_yAxis + D_yAxis;
+//  P_xAxis = KP_xAxis * DistanceTravelledByRobot;
+////  P_xAxis = KP_xAxis * errorPosXAxis;
+//  I_xAxis = I_xAxis + errorPosXAxis * KI_xAxis;
+//  D_xAxis = (errorPosXAxis - lastErrorPosXAxis) * KD_xAxis;
+//  PID_xAxis = P_xAxis + I_xAxis + D_xAxis;
+//  
+//  P_yAxis = KP_yAxis * DistanceTravelledByRobot;
+////  P_yAxis = KP_yAxis * errorPosYAxis;
+//  I_yAxis = I_yAxis + errorPosYAxis * KI_yAxis;
+//  D_yAxis = (errorPosYAxis - lastErrorPosYAxis) * KD_yAxis;
+//  PID_yAxis = P_yAxis + I_yAxis + D_yAxis;
 
   P_theta = KP_theta * errorPosTheta;
   I_theta = I_theta + errorPosTheta * KI_theta;
   D_theta = (errorPosTheta - lastErrorPosTheta) * KD_theta;
   PID_theta = P_theta + I_theta + D_theta;
 
-  VelocityRobotX = PID_xAxis * errorPosXAxis / DistanceTravelledByRobot;
-  VelocityRobotY = PID_yAxis * errorPosYAxis / DistanceTravelledByRobot;
-  VelocityRobotZ = PID_theta;
+//  VelocityRobotX = PID_xAxis * errorPosXAxis / DistanceTravelledByRobot;
+//  VelocityRobotY = PID_yAxis * errorPosYAxis / DistanceTravelledByRobot;
+//  VelocityRobotZ = PID_theta;
+
+  VelocityRobotX = PID_V * errorPosXAxis / DistanceTravelledByRobot;
+  VelocityRobotY = PID_V * errorPosYAxis / DistanceTravelledByRobot;
+  VelocityRobotZ = 0;
     
   if (VelocityRobotX > velocity) VelocityRobotX = velocity;
   if (VelocityRobotY > velocity) VelocityRobotY = velocity;
   if (VelocityRobotZ > velocity) VelocityRobotZ = velocity;
 
-  lastErrorPosXAxis = errorPosXAxis;
-  lastErrorPosYAxis = errorPosYAxis;
-  lastErrorPosTheta = errorPosTheta;
+//  lastErrorPosXAxis = errorPosXAxis;
+//  lastErrorPosYAxis = errorPosYAxis;
+//  lastErrorPosTheta = errorPosTheta;
 
-  if (I_xAxis > 255) I_xAxis = 255;
-  if (I_xAxis < -255) I_xAxis = -255;
-  if (errorPosXAxis == 0) I_xAxis = 0;
-  if (PID_xAxis > motor_pid_max) PID_xAxis = motor_pid_max;
-  if (PID_xAxis < motor_pid_min) PID_xAxis = motor_pid_min;
-  if (PID_xAxis > velocity) PID_xAxis = velocity;
-  if (PID_xAxis < -velocity) PID_xAxis = -velocity;
+//  if (I_xAxis > 255) I_xAxis = 255;
+//  if (I_xAxis < -255) I_xAxis = -255;
+//  if (errorPosXAxis == 0) I_xAxis = 0;
+//  if (PID_xAxis > motor_pid_max) PID_xAxis = motor_pid_max;
+//  if (PID_xAxis < motor_pid_min) PID_xAxis = motor_pid_min;
+//  if (PID_xAxis > velocity) PID_xAxis = velocity;
+//  if (PID_xAxis < -velocity) PID_xAxis = -velocity;
+//
+//  if (I_yAxis > 255) I_yAxis = 255;
+//  if (I_yAxis < -255) I_yAxis = -255;
+//  if (errorPosYAxis == 0) I_yAxis = 0;
+//  if (PID_yAxis > motor_pid_max) PID_yAxis = motor_pid_max;
+//  if (PID_yAxis < motor_pid_min) PID_yAxis = motor_pid_min;
+//  if (PID_yAxis > velocity) PID_yAxis = velocity;
+//  if (PID_yAxis < -velocity) PID_yAxis = -velocity;
+//
+//  if (I_theta > 255) I_theta = 255;
+//  if (I_theta < -255) I_theta = -255;
+//  if (errorPosYAxis == 0) I_theta = 0;
+//  if (PID_theta > motor_pid_max) PID_theta = motor_pid_max;
+//  if (PID_theta < motor_pid_min) PID_theta = motor_pid_min;
+//  if (PID_theta > velocity) PID_theta = velocity;
+//  if (PID_theta < -velocity) PID_theta = -velocity;
 
-  if (I_yAxis > 255) I_yAxis = 255;
-  if (I_yAxis < -255) I_yAxis = -255;
-  if (errorPosYAxis == 0) I_yAxis = 0;
-  if (PID_yAxis > motor_pid_max) PID_yAxis = motor_pid_max;
-  if (PID_yAxis < motor_pid_min) PID_yAxis = motor_pid_min;
-  if (PID_yAxis > velocity) PID_yAxis = velocity;
-  if (PID_yAxis < -velocity) PID_yAxis = -velocity;
+//  InverseKinematicsNoPID(VelocityRobotX, VelocityRobotY, VelocityRobotZ, velocity, OFFSET_HEADING, 4, R_WHEEL, R_ROBOT);
+  InverseKinematicsWithPID(VelocityRobotX, VelocityRobotY, VelocityRobotZ, velocity, OFFSET_HEADING, 4, R_WHEEL, R_ROBOT);
 
-  if (I_theta > 255) I_theta = 255;
-  if (I_theta < -255) I_theta = -255;
-  if (errorPosYAxis == 0) I_theta = 0;
-  if (PID_theta > motor_pid_max) PID_theta = motor_pid_max;
-  if (PID_theta < motor_pid_min) PID_theta = motor_pid_min;
-  if (PID_theta > velocity) PID_theta = velocity;
-  if (PID_theta < -velocity) PID_theta = -velocity;
-
-  InverseKinematicsNoPID(VelocityRobotX, VelocityRobotY, VelocityRobotZ, velocity, OFFSET_HEADING, 4, R_WHEEL, R_ROBOT);
-
-  Serial.print("SPX:"); Serial.print("\t");
-  Serial.print(setPointPosX); Serial.print("\t");
+//  Serial.print("SPX:"); Serial.print("\t");
+//  Serial.print(setPointPosX); Serial.print("\t");
   Serial.print("ACX:"); Serial.print("\t");
   Serial.print(RobotActualPositionX); Serial.print("\t");
   Serial.print("ERX:"); Serial.print("\t");
   Serial.print(errorPosXAxis); Serial.print("\t");
-  Serial.print("PIDX:"); Serial.print("\t");
-  Serial.print(PID_xAxis); Serial.print("\t");
+//  Serial.print("PIDX:"); Serial.print("\t");
+//  Serial.print(PID_xAxis); Serial.print("\t");
 
-  Serial.print("SPY:"); Serial.print("\t");
-  Serial.print(setPointPosY); Serial.print("\t");
+//  Serial.print("SPY:"); Serial.print("\t");
+//  Serial.print(setPointPosY); Serial.print("\t");
   Serial.print("ACY:"); Serial.print("\t");
   Serial.print(RobotActualPositionY); Serial.print("\t");
   Serial.print("ERY:"); Serial.print("\t");
   Serial.print(errorPosYAxis); Serial.print("\t");
-  Serial.print("PIDX:"); Serial.print("\t");
-  Serial.print(PID_yAxis); Serial.print("\t");
+//  Serial.print("PIDX:"); Serial.print("\t");
+//  Serial.print(PID_yAxis); Serial.print("\t");
 
-  Serial.print("SPT:"); Serial.print("\t");
-  Serial.print(setPointPosTheta); Serial.print("\t");
-  Serial.print("ACT:"); Serial.print("\t");
-  Serial.print(RobotActualPositionTheta); Serial.print("\t");
-  Serial.print("ERT:"); Serial.print("\t");
-  Serial.print(errorPosTheta); Serial.print("\t");
-  Serial.print("PIDT:"); Serial.print("\t");
-  Serial.print(PID_theta); Serial.print("\t");
+//  Serial.print("SPT:"); Serial.print("\t");
+//  Serial.print(setPointPosTheta); Serial.print("\t");
+//  Serial.print("ACT:"); Serial.print("\t");
+//  Serial.print(RobotActualPositionTheta); Serial.print("\t");
+//  Serial.print("ERT:"); Serial.print("\t");
+//  Serial.print(errorPosTheta); Serial.print("\t");
+  Serial.print("Distance:"); Serial.print("\t");
+  Serial.print(DistanceTravelledByRobot); Serial.print("\t");
   Serial.println();
   delay(20);
 }

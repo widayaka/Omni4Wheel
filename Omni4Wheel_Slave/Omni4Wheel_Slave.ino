@@ -68,7 +68,7 @@ int PB_DOWN = 3;
 int PB_OK = 15;
 
 // PID Control Variables for Encoders
-int setPoint_velocity[NUM_OF_MOTORS], setPoint_velocity_monitor[NUM_OF_MOTORS];
+
 
 int16_t encoder_cnt[NUM_OF_MOTORS],
         encoder_prev_cnt[NUM_OF_MOTORS],
@@ -79,9 +79,7 @@ int16_t encoder_cnt[NUM_OF_MOTORS],
 
 float speed_motor_encoder[NUM_OF_MOTORS];
 
-float error[NUM_OF_MOTORS], error_w[NUM_OF_MOTORS],
-      lastError[NUM_OF_MOTORS], lastError_w[NUM_OF_MOTORS],
-      P[NUM_OF_MOTORS], P_w[NUM_OF_MOTORS],
+float P[NUM_OF_MOTORS], P_w[NUM_OF_MOTORS],
       I[NUM_OF_MOTORS], I_w[NUM_OF_MOTORS],
       D[NUM_OF_MOTORS], D_w[NUM_OF_MOTORS],
       PIDForRPM[NUM_OF_MOTORS], PID_w[NUM_OF_MOTORS];
@@ -231,6 +229,15 @@ hw_timer_t *timer20ms = NULL;
 volatile bool flag_20ms = false;
 void IRAM_ATTR onTimer() {flag_20ms = true;}
 
+int test = 0;
+
+void onTimerInterrupt20ms() {
+  // kontrol motor
+  globalMotorControl();
+  // kontrol posisi
+  globalPositionCControl();
+}
+
 void setup() {
   Serial.begin(115200);
   SlaveSerial2.begin(SLAVE_SERIAL_BAUDRATE, SERIAL_8N1, RX2, TX2);
@@ -241,7 +248,7 @@ void setup() {
   pinMode(PB_OK, INPUT_PULLUP);
 
   timer20ms = timerBegin(0, 80, true);
-  timerAttachInterrupt(timer20ms, &onTimer, true);
+  timerAttachInterrupt(timer20ms, &onTimerInterrupt20ms, true);
   timerAlarmWrite(timer20ms, 20000, true);
   timerAlarmEnable(timer20ms);
 
@@ -270,7 +277,6 @@ void setup() {
   SetPIDGainYaw(10, 0, 5);
   
   SetPIDGainRPM(0.01,0.1,0);
-  SetPointRPM(0,0,0,0);
   
   SetPIDGainOdomX(100,0,0);
   SetPIDGainOdomY(100,0,0);
@@ -279,17 +285,19 @@ void setup() {
   for(int i = 0; i < NUM_OF_MOTORS; i++){encoder_cnt[i] = 0;}
   previousTime_odom = millis();
   RobotBootScreen();
+  int x = 
+  setMotorRPM([100,200,300,400]);
 }
 
 void loop() {
-  while (menu == 0) {RobotHomeScreen();}
-  while (menu == 1) {RobotMenuEncoder();}
-  while (menu == 2) {RobotMenuMotor();}
-
-  while (menu == 6) {RobotOdometry();}
-  while (menu == 7) {RobotHoldPosition();}
-  while (menu == 8) {RobotJoystickControl();}
-  while (menu == 9) {RobotOdometry();}
+//  while (menu == 0) {RobotHomeScreen();}
+//  while (menu == 1) {RobotMenuEncoder();}
+//  while (menu == 2) {RobotMenuMotor();}
+//
+//  while (menu == 6) {RobotOdometry();}
+//  while (menu == 7) {RobotHoldPosition();}
+//  while (menu == 8) {RobotJoystickControl();}
+//  while (menu == 9) {RobotOdometry();}
 
 //  if (flag_20ms) {flag_20ms = false; odometryTimerLoop();}
 //  setRobotPosition(10,0,0,50);

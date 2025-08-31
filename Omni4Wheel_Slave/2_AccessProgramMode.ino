@@ -58,17 +58,16 @@ void RobotOdometry(){
 //  display.setCursor(0,10);  display.print("Orientation");
 //  display.setCursor(30,10); display.print(":");
 //  display.setCursor(70,10); display.print(yaw_polar);
-  Serial.print(RobotActualPositionTheta); Serial.print("\t");
-
-  Serial.print(RobotActualPositionX); Serial.print("\t");
-  Serial.print(RobotActualPositionY); Serial.print("\t");
-  Serial.println();
+//  Serial.print(RobotActualPositionTheta); Serial.print("\t");
+//
+//  Serial.print(RobotActualPositionX); Serial.print("\t");
+//  Serial.print(RobotActualPositionY); Serial.print("\t");
+//  Serial.println();
   
   display.display();
   
   if (flag_20ms){flag_20ms = false; odometryTimerLoop();}
-  
-//  setRobotPosition(1,0,setPointYaw,150);
+  setRobotPosition(2, 4, setPointYaw, 100);
 
   if (SerialData[0] == 0 || SerialData[0] == 1) menu = 0;
   SerialDataReset();
