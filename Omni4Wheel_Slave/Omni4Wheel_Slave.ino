@@ -297,6 +297,7 @@ void setup() {
    float a[] = {100,200,300,400};
    setMotorRPM(100, 200, 300, 400);
    enableMotorControl = false;
+   enablePositionControl = false;
 }
 
 void loop() {
