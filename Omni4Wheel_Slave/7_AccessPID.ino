@@ -3,12 +3,6 @@ void SetPIDMinMax(float min, float max){
   motor_pid_max = max;
 }
 
-void SetPIDGainRPM(float kp, float ki, float kd){
-  motor_p = kp;
-  motor_i = ki;
-  motor_d = kd;
-}
-
 void SetPIDGainYaw(float kp, float ki, float kd){
   yaw_p = kp;
   yaw_i = ki;

@@ -69,13 +69,7 @@ int PB_OK = 15;
 
 // PID Control Variables for Encoders
 
-
-int16_t encoder_cnt[NUM_OF_MOTORS],
-        encoder_prev_cnt[NUM_OF_MOTORS],
-        encoder_last_cnt[NUM_OF_MOTORS],
-        encoder_velocity[NUM_OF_MOTORS],
-        encoder_velocity_monitor[NUM_OF_MOTORS],
-        DistanceTravelledByWheel[NUM_OF_MOTORS];
+int16_t DistanceTravelledByWheel[NUM_OF_MOTORS];
 
 float speed_motor_encoder[NUM_OF_MOTORS];
 
@@ -87,10 +81,6 @@ float P[NUM_OF_MOTORS], P_w[NUM_OF_MOTORS],
 float KP[NUM_OF_MOTORS],
       KI[NUM_OF_MOTORS],
       KD[NUM_OF_MOTORS];
-
-float motor_p,
-      motor_i,
-      motor_d;
 
 float motor_pid_min,
       motor_pid_max;
@@ -131,11 +121,20 @@ float P_theta, I_theta, D_theta,
       errorPosTheta, lastErrorPosTheta,
       PID_theta;
 
-float RobotActualPositionX = 0.0, RobotActualPositionY = 0.0, RobotActualPositionTheta = 0.0,
-      DistanceTravelledByRobot = 0.0, DistanceRobotToTarget = 0.0, TotalDistanceTravelledByRobot = 0.0,
-      VelocityRobotX, VelocityRobotY, VelocityRobotZ,
-      ErrorPositionX, ErrorPositionY, ErrorPositionTheta,
-      v_robot_l_x, v_robot_l_y;
+float RobotActualPositionX = 0.0;
+float RobotActualPositionY = 0.0;
+float RobotActualPositionTheta = 0.0;
+// float DistanceTravelledByRobot = 0.0;
+float DistanceRobotToTarget = 0.0;
+float TotalDistanceTravelledByRobot = 0.0;
+float VelocityRobotX = 0.0;
+float VelocityRobotY = 0.0;
+float VelocityRobotZ = 0.0;
+float ErrorPositionX = 0.0;
+float ErrorPositionY = 0.0;
+float ErrorPositionTheta = 0.0;
+float v_robot_l_x = 0.0;
+float v_robot_l_y = 0.0;
 
 unsigned long currentTime_odom, previousTime_odom;
 
@@ -229,9 +228,11 @@ hw_timer_t *timer20ms = NULL;
 volatile bool flag_20ms = false;
 void IRAM_ATTR onTimer() {flag_20ms = true;}
 
-int test = 0;
-
-void onTimerInterrupt20ms() {
+void onTimerInterrupt20ms() { //control loop
+  // get Motor RPM
+  encoderAll_RPM();
+  // odometry
+  odometryTimerLoop();
   // kontrol motor
   globalMotorControl();
   // kontrol posisi
@@ -276,7 +277,7 @@ void setup() {
   SetPIDMinMax(-255, 255);
   SetPIDGainYaw(10, 0, 5);
   
-  SetPIDGainRPM(0.01,0.1,0);
+  setPIDMotor(0.01,0.1,0);
   
   SetPIDGainOdomX(100,0,0);
   SetPIDGainOdomY(100,0,0);
@@ -285,8 +286,8 @@ void setup() {
   for(int i = 0; i < NUM_OF_MOTORS; i++){encoder_cnt[i] = 0;}
   previousTime_odom = millis();
   RobotBootScreen();
-  int a[] = {100,200,300,400};
-  setMotorRPM(a);
+  // int a[] = {100,200,300,400};
+  // setMotorRPM(a);
 }
 
 void loop() {
