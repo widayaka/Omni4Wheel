@@ -25,12 +25,6 @@
 //    {0.021213f, -0.021213f, -0.021213f, 0.021213f}
 //};
 
-// Matrix Odometry : N = 4, Heading Offset = 45, Robot Radius = 1.0, Wheel Radius = 0.03
-float m_odometry[2][4] = {
-    {-0.010607f, -0.010607f, 0.010607f, 0.010607f},
-    {0.010607f, -0.010607f, -0.010607f, 0.010607f}
-};
-
 void InverseKinematicsNoPID(float speed_global_x, float speed_global_y, float speed_angular_w, float maxSpeed, float offset_heading, int number_of_wheels, float wheelRadius, float robotRadius){
   float del_angle = 360.0f / number_of_wheels;
   float motor[number_of_wheels];
@@ -59,37 +53,34 @@ void InverseKinematicsNoPID(float speed_global_x, float speed_global_y, float sp
 void InverseKinematicsWithPID(float x, float y, float w, float offset_heading, int number_of_wheels){
   float del_angle = 360.0f / number_of_wheels;
   float motor[number_of_wheels];
-  
-  encoderAll_RPM();
-  
-  for(int i = 0; i < number_of_wheels; i++){
-    float angleDeg = (del_angle * i) + offset_heading;
-    float angleRad = angleDeg * PI / 180.0f;
-    
-    encoderAll_RPM();
-    motor[i] = (-x * sinf(angleRad)) / R_WHEEL;
-    motor[i] += (y * cosf(angleRad)) / R_WHEEL;
-    motor[i] += (w * R_ROBOT) / R_WHEEL;
-      
-    if (motor[i] > 255)  motor[i] = 255;
-    if (motor[i] < -255) motor[i] = -255;
-
-    error[i] = (motor[i] - encoder_velocity[i]);
-    P[i] = error[i] * motor_p;
-    I[i] += error[i] * motor_i;
-    D[i] = (error[i] - lastError[i]) * motor_d;
-    PIDForRPM[i] = P[i] + I[i] + D[i];
-
-    if (PIDForRPM[i] > motor_pid_max) PIDForRPM[i] = motor_pid_max;
-    if (PIDForRPM[i] < motor_pid_min) PIDForRPM[i] = motor_pid_min;
-
-    if (I[i] > motor_pid_max) I[i] = motor_pid_max;
-    if (I[i] < motor_pid_min) I[i] = motor_pid_min;
-
-    if (error[i] == 0) I[i] = 0;
-    
-    lastError[i] = error[i];
-  }
+   
+//  for(int i = 0; i < number_of_wheels; i++){
+//    float angleDeg = (del_angle * i) + offset_heading;
+//    float angleRad = angleDeg * PI / 180.0f;
+//    
+//    motor[i] = (-x * sinf(angleRad)) / R_WHEEL;
+//    motor[i] += (y * cosf(angleRad)) / R_WHEEL;
+//    motor[i] += (w * R_ROBOT) / R_WHEEL;
+//      
+//    if (motor[i] > 255)  motor[i] = 255;
+//    if (motor[i] < -255) motor[i] = -255;
+//
+//    error[i] = (motor[i] - encoder_velocity[i]);
+//    P[i] = error[i] * motor_p;
+//    I[i] += error[i] * motor_i;
+//    D[i] = (error[i] - lastError[i]) * motor_d;
+//    PIDForRPM[i] = P[i] + I[i] + D[i];
+//
+//    if (PIDForRPM[i] > motor_pid_max) PIDForRPM[i] = motor_pid_max;
+//    if (PIDForRPM[i] < motor_pid_min) PIDForRPM[i] = motor_pid_min;
+//
+//    if (I[i] > motor_pid_max) I[i] = motor_pid_max;
+//    if (I[i] < motor_pid_min) I[i] = motor_pid_min;
+//
+//    if (error[i] == 0) I[i] = 0;
+//    
+//    lastError[i] = error[i];
+//  }
   
   DriveMotor(PIDForRPM[0], PIDForRPM[1], PIDForRPM[2], PIDForRPM[3]);
 
@@ -139,36 +130,6 @@ void robotOodometry(float MI[2][4], float T[4], float angle, float output[2]) {
     }
 }
 
-void odometryTimerLoop(){
-  currentTime_odom = millis();
-  deltaTime_odom = currentTime_odom - previousTime_odom;
-  float dt = deltaTime_odom / 1000.0f;
-  
-  for (int i = 0; i < NUM_OF_MOTORS; i++){
-    delta_encoder[i] = encoder_cnt[i] - encoder_last_cnt[i];
-//    theta_dot[i] = delta_encoder[i] / (float) deltaTime_odom / ENCODER_PPR * 2 * PI;
-    theta_dot[i] = (delta_encoder[i] / ENCODER_PPR) * 2.0 * PI / dt;
-    velocity_wheel[i] = theta_dot[i] * R_WHEEL;
-  }
-
-  robotOodometry(m_odometry, velocity_wheel, RobotActualPositionTheta, velocity_robot);
-
-  v_robot_l_x = velocity_robot[0];
-  v_robot_l_y = velocity_robot[1];
-  
-//  RobotActualPositionX += v_robot_l_x * deltaTime_odom;
-//  RobotActualPositionY += v_robot_l_y * deltaTime_odom;
-
-//  float theta_radian = RobotActualPositionTheta * 2 * PI / 180.0f;
-//  v_robot_l_x = -velocity_robot[0] * cosf(theta_radian) - velocity_robot[1] * sinf(theta_radian);
-//  v_robot_l_y = -velocity_robot[0] * sinf(theta_radian) + velocity_robot[1] * cosf(theta_radian);
-  RobotActualPositionX += v_robot_l_x * dt;
-  RobotActualPositionY += v_robot_l_y * dt;
-
-  previousTime_odom = currentTime_odom;
-  for (int i = 0; i < NUM_OF_MOTORS; i++){encoder_last_cnt[i] = encoder_cnt[i];}
-}
-
 void setRobotPosition(float setPointPosX, float setPointPosY, float setPointPosTheta, float velocity){
   errorPosXAxis = setPointPosX - RobotActualPositionX;
   errorPosYAxis = setPointPosY - RobotActualPositionY;
@@ -177,16 +138,16 @@ void setRobotPosition(float setPointPosX, float setPointPosY, float setPointPosT
   if (errorPosTheta > 180){errorPosTheta = errorPosTheta - 360;}
   else if (errorPosTheta < -180){errorPosTheta = errorPosTheta + 360;}
   
-  DistanceTravelledByRobot = sqrt((errorPosXAxis*errorPosXAxis) + (errorPosYAxis*errorPosYAxis));
+  TotalDistanceTravelledByRobot = sqrt((errorPosXAxis*errorPosXAxis) + (errorPosYAxis*errorPosYAxis));
   float heading = atan2(errorPosYAxis,errorPosXAxis);
 
-  P_xAxis = KP_xAxis * DistanceTravelledByRobot;
+  P_xAxis = KP_xAxis * TotalDistanceTravelledByRobot;
 //  P_xAxis = KP_xAxis * errorPosXAxis;
   I_xAxis = I_xAxis + errorPosXAxis * KI_xAxis;
   D_xAxis = (errorPosXAxis - lastErrorPosXAxis) * KD_xAxis;
   PID_xAxis = P_xAxis + I_xAxis + D_xAxis;
   
-  P_yAxis = KP_yAxis * DistanceTravelledByRobot;
+  P_yAxis = KP_yAxis * TotalDistanceTravelledByRobot;
 //  P_yAxis = KP_yAxis * errorPosYAxis;
   I_yAxis = I_yAxis + errorPosYAxis * KI_yAxis;
   D_yAxis = (errorPosYAxis - lastErrorPosYAxis) * KD_yAxis;
@@ -197,8 +158,8 @@ void setRobotPosition(float setPointPosX, float setPointPosY, float setPointPosT
   D_theta = (errorPosTheta - lastErrorPosTheta) * KD_theta;
   PID_theta = P_theta + I_theta + D_theta;
 
-  VelocityRobotX = PID_xAxis * errorPosXAxis / DistanceTravelledByRobot;
-  VelocityRobotY = PID_yAxis * errorPosYAxis / DistanceTravelledByRobot;
+  VelocityRobotX = PID_xAxis * errorPosXAxis / TotalDistanceTravelledByRobot;
+  VelocityRobotY = PID_yAxis * errorPosYAxis / TotalDistanceTravelledByRobot;
   VelocityRobotZ = PID_theta;
     
   if (VelocityRobotX > velocity) VelocityRobotX = velocity;

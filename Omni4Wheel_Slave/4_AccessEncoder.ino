@@ -62,13 +62,15 @@ void encoder4_RPM(){
   }
 }
 
-void encoderAll_RPM(){
-  currentTime = millis();
-  if (currentTime - previousTime >= interval){
-    previousTime = currentTime;
-    for(int i = 0; i < NUM_OF_MOTORS; i++){
-      encoder_velocity[i] = ((encoder_cnt[i] - encoder_prev_cnt[i]) * 60) / ENCODER_PPR;
-      encoder_prev_cnt[i] = encoder_cnt[i];
-    }
-  }
-}
+//void encoderAll_RPM(void *parameter){
+//  for(;;){
+//    currentTime = millis();
+//    if (currentTime - previousTime >= interval){
+//      previousTime = currentTime;
+//      for(int i = 0; i < NUM_OF_MOTORS; i++){
+//        encoder_velocity[i] = ((encoder_cnt[i] - encoder_prev_cnt[i]) * 60) / ENCODER_PPR;
+//        encoder_prev_cnt[i] = encoder_cnt[i];
+//      }
+//    }
+//  } 
+//}

@@ -30,6 +30,11 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
+#define PB_RUN 12
+#define PB_UP 5
+#define PB_DOWN 3
+#define PB_OK 15
+
 #define PUSH_BUTTON_OK_IS_PRESSED   digitalRead(PB_OK) == LOW
 #define PUSH_BUTTON_DOWN_IS_PRESSED digitalRead(PB_DOWN) == LOW
 #define PUSH_BUTTON_UP_IS_PRESSED   digitalRead(PB_UP) == LOW
@@ -62,161 +67,180 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #define SLAVE_SERIAL_BAUDRATE 115200
 HardwareSerial SlaveSerial2(2);
 
-int PB_RUN = 12;
-int PB_UP = 5;
-int PB_DOWN = 3;
-int PB_OK = 15;
-
-// PID Control Variables for Encoders
-int setPoint_velocity[NUM_OF_MOTORS], setPoint_velocity_monitor[NUM_OF_MOTORS];
-
-int16_t encoder_cnt[NUM_OF_MOTORS],
-        encoder_prev_cnt[NUM_OF_MOTORS],
-        encoder_last_cnt[NUM_OF_MOTORS],
-        encoder_velocity[NUM_OF_MOTORS],
-        encoder_velocity_monitor[NUM_OF_MOTORS],
-        DistanceTravelledByWheel[NUM_OF_MOTORS];
-
 float speed_motor_encoder[NUM_OF_MOTORS];
 
-float error[NUM_OF_MOTORS], error_w[NUM_OF_MOTORS],
-      lastError[NUM_OF_MOTORS], lastError_w[NUM_OF_MOTORS],
-      P[NUM_OF_MOTORS], P_w[NUM_OF_MOTORS],
-      I[NUM_OF_MOTORS], I_w[NUM_OF_MOTORS],
-      D[NUM_OF_MOTORS], D_w[NUM_OF_MOTORS],
-      PIDForRPM[NUM_OF_MOTORS], PID_w[NUM_OF_MOTORS];
+int16_t encoder_cnt[NUM_OF_MOTORS];
+int16_t encoder_prev_cnt[NUM_OF_MOTORS];
+int16_t encoder_last_cnt[NUM_OF_MOTORS];
+int16_t encoder_velocity[NUM_OF_MOTORS];
+int16_t DistanceTravelledByWheel[NUM_OF_MOTORS];
 
-float KP[NUM_OF_MOTORS],
-      KI[NUM_OF_MOTORS],
-      KD[NUM_OF_MOTORS];
+float setPoint_velocity[NUM_OF_MOTORS];
 
-float motor_p,
-      motor_i,
-      motor_d;
+float P[NUM_OF_MOTORS], P_w[NUM_OF_MOTORS];
+float I[NUM_OF_MOTORS], I_w[NUM_OF_MOTORS];
+float D[NUM_OF_MOTORS], D_w[NUM_OF_MOTORS];
+float PIDForRPM[NUM_OF_MOTORS], PID_w[NUM_OF_MOTORS];
 
-float motor_pid_min,
-      motor_pid_max;
+float KP[NUM_OF_MOTORS];
+float KI[NUM_OF_MOTORS];
+float KD[NUM_OF_MOTORS];
 
-float motor[NUM_OF_MOTORS],
-      motor_setPoint[NUM_OF_MOTORS],
-      pwm_motor[NUM_OF_MOTORS];
+float motor_pid_min;
+float motor_pid_max;
 
-// PID Control Variables for Heading Lock
-float setPointYaw,
-      errorYaw,
-      lastErrorYaw,
-      P_yaw,
-      I_yaw,
-      D_yaw,
-      PID_yaw;
+float error[NUM_OF_MOTORS];
+float lastError[NUM_OF_MOTORS];
+float motor_p;
+float motor_i;
+float motor_d;
 
-float yaw_p,
-      yaw_i,
-      yaw_d;
+float motor[NUM_OF_MOTORS];
+float motor_setPoint[NUM_OF_MOTORS];
+float pwm_motor[NUM_OF_MOTORS];
 
-float yaw_pid_min,
-      yaw_pid_max;
+float setPointYaw;
+float errorYaw;
+float lastErrorYaw;
+float P_yaw;
+float I_yaw;
+float D_yaw;
+float PID_yaw;
 
-// PID Control Variables for Odometry
-float P_xAxis, I_xAxis, D_xAxis, 
-      KP_xAxis, KI_xAxis, KD_xAxis, 
-      errorPosXAxis, lastErrorPosXAxis, 
-      PID_xAxis;
+float yaw_p;
+float yaw_i;
+float yaw_d;
+
+float yaw_pid_min;
+float yaw_pid_max;
+
+float P_xAxis; 
+float I_xAxis; 
+float D_xAxis;
+float KP_xAxis; 
+float KI_xAxis; 
+float KD_xAxis;
+float errorPosXAxis;
+float lastErrorPosXAxis; 
+float PID_xAxis;
       
-float P_yAxis, I_yAxis, D_yAxis, 
-      KP_yAxis, KI_yAxis, KD_yAxis, 
-      errorPosYAxis, lastErrorPosYAxis,
-      PID_yAxis;
+float P_yAxis; 
+float I_yAxis; 
+float D_yAxis;
+float KP_yAxis; 
+float KI_yAxis; 
+float KD_yAxis;
+float errorPosYAxis;
+float lastErrorPosYAxis;
+float PID_yAxis;
       
-float P_theta, I_theta, D_theta,
-      KP_theta, KI_theta, KD_theta, 
-      errorPosTheta, lastErrorPosTheta,
-      PID_theta;
+float P_theta; 
+float I_theta; 
+float D_theta;
+float KP_theta; 
+float KI_theta; 
+float KD_theta;
+float errorPosTheta;
+float lastErrorPosTheta;
+float PID_theta;
 
-float RobotActualPositionX = 0.0, RobotActualPositionY = 0.0, RobotActualPositionTheta = 0.0,
-      DistanceTravelledByRobot = 0.0, DistanceRobotToTarget = 0.0, TotalDistanceTravelledByRobot = 0.0,
-      VelocityRobotX, VelocityRobotY, VelocityRobotZ,
-      ErrorPositionX, ErrorPositionY, ErrorPositionTheta,
-      v_robot_l_x, v_robot_l_y;
+float RobotActualPositionX = 0.0;
+float RobotActualPositionY = 0.0;
+float RobotActualPositionTheta = 0.0;
+
+float DistanceRobotToTarget = 0.0;
+float TotalDistanceTravelledByRobot = 0.0;
+
+float VelocityRobotX = 0.0;
+float VelocityRobotY = 0.0;
+float VelocityRobotZ = 0.0;
+
+float ErrorPositionX = 0.0;
+float ErrorPositionY = 0.0;
+float ErrorPositionTheta = 0.0;
+
+float v_robot_l_x = 0.0;
+float v_robot_l_y = 0.0;
 
 unsigned long currentTime_odom, previousTime_odom;
 
-float velocity_wheel[4],
-      velocity_robot[2],
-      output_[2],
-      theta_dot[4];
+float velocity_wheel[4];
+float velocity_robot[2];
+float output_[2];
+float theta_dot[4];
       
-float yaw_robot,
-      yaw_polar;
+float yaw_robot;
+float yaw_polar;
 
-int deltaTime_odom,
-    delta_encoder[4];
+int deltaTime_odom;
+int delta_encoder[4];
 
 int PIN_MOT_1A = 23;
 int PIN_MOT_1B = 19;
 int PIN_ENC_1A = 36;
 int PIN_ENC_1B = 39;
-int VAL_ENC_1A = 0;
-int VAL_ENC_1B = 0;
+volatile int VAL_ENC_1A = 0;
+volatile int VAL_ENC_1B = 0;
 
 int PIN_MOT_2A = 18;
 int PIN_MOT_2B = 4;
 int PIN_ENC_2A = 34;
 int PIN_ENC_2B = 35;
-int VAL_ENC_2A = 0;
-int VAL_ENC_2B = 0;
+volatile int VAL_ENC_2A = 0;
+volatile int VAL_ENC_2B = 0;
 
 int PIN_MOT_3A = 2;
 int PIN_MOT_3B = 13;
 int PIN_ENC_3A = 32;
 int PIN_ENC_3B = 33;
-int VAL_ENC_3A = 0;
-int VAL_ENC_3B = 0;
+volatile int VAL_ENC_3A = 0;
+volatile int VAL_ENC_3B = 0;
 
 int PIN_MOT_4A = 14;
 int PIN_MOT_4B = 27;
 int PIN_ENC_4A = 25;
 int PIN_ENC_4B = 26;
-int VAL_ENC_4A = 0;
-int VAL_ENC_4B = 0;
+volatile int VAL_ENC_4A = 0;
+volatile int VAL_ENC_4B = 0;
 
-int frequency=5000,
-    resolution=8,
-    pwmChannel1 = 0, 
-    pwmChannel2 = 1, 
-    pwmChannel3 = 2, 
-    pwmChannel4 = 3;
+int frequency=5000;
+int resolution=8;
+int pwmChannel1 = 0; 
+int pwmChannel2 = 1; 
+int pwmChannel3 = 2; 
+int pwmChannel4 = 3;
 
-unsigned long currentTime, previousTime = 0;
+unsigned long currentTime = 0;
+unsigned long previousTime = 0;
+
 int interval = 20;
 
-int menu=0, 
-    pilih=0, 
-    pilih_menu_encoder=0, 
-    pilih_menu_motor=0;
+int menu=0;
+int pilih=0;
+int pilih_menu_encoder=0; 
+int pilih_menu_motor=0;
     
-// Serial Communication Properties
-const char startDataIdentifier = '*',
-           dataSeparator = ',',
-           stopDataIdentifier = '#';
+const char startDataIdentifier = '*';
+const char dataSeparator = ',';
+const char stopDataIdentifier = '#';
 
-int16_t sendDataEncoder1, 
-        sendDataEncoder2, 
-        sendDataEncoder3, 
-        sendDataEncoder4;
+int16_t sendDataEncoder1; 
+int16_t sendDataEncoder2; 
+int16_t sendDataEncoder3;
+int16_t sendDataEncoder4;
     
-int16_t sendDataRPM1, 
-        sendDataRPM2, 
-        sendDataRPM3, 
-        sendDataRPM4;
+int16_t sendDataRPM1; 
+int16_t sendDataRPM2; 
+int16_t sendDataRPM3;
+int16_t sendDataRPM4;
 
 char dataReceived;
 
 const byte arraySize = 21;
 
-String dataPackage,
-       bufferDataIn,
-       bufferDataParsing[arraySize];
+String dataPackage;
+String bufferDataIn;
+String bufferDataParsing[arraySize];
 
 bool dataIsComplete;
 
@@ -224,12 +248,86 @@ byte indexOfData;
 
 int counter;
 float SerialData[10];
-float data1, data2, data3, data4;
+float data1;
+float data2;
+float data3; 
+float data4;
+
 int UARTStatusDisplay;
 
 hw_timer_t *timer20ms = NULL;
 volatile bool flag_20ms = false;
 void IRAM_ATTR onTimer() {flag_20ms = true;}
+
+void IRAM_ATTR ontTimer20ms(){
+  
+}
+
+TaskHandle_t Task_ReadencoderAll_RPM = NULL;
+void encoderAll_RPM(void *parameter){
+  for(;;){
+    currentTime = millis();
+    if (currentTime - previousTime >= interval){
+      previousTime = currentTime;
+      for(int i = 0; i < NUM_OF_MOTORS; i++){
+        encoder_velocity[i] = ((encoder_cnt[i] - encoder_prev_cnt[i]) * 60) / ENCODER_PPR;
+        encoder_prev_cnt[i] = encoder_cnt[i];
+      }
+    }
+  } 
+}
+
+bool enableMotorControl;
+TaskHandle_t Task_MotorRPMWithPID = NULL;
+void MotorRPMWithPID(void *parameter){
+  for(;;){
+    if (!enableMotorControl) return;
+      for (int i = 0; i < NUM_OF_MOTORS; i++){    
+        error[i] = (setPoint_velocity[i] - encoder_velocity[i]);
+        P[i] = (float)(error[i] * motor_p);
+        I[i] += error[i] * motor_i;
+        D[i] = (error[i] - lastError[i]) * motor_d;
+        PIDForRPM[i] = P[i] + I[i] + D[i];
+        if (PIDForRPM[i] > motor_pid_max) PIDForRPM[i] = motor_pid_max;
+        if (PIDForRPM[i] < motor_pid_min) PIDForRPM[i] = motor_pid_min;
+        if (I[i] > motor_pid_max) I[i] = motor_pid_max;
+        if (I[i] < motor_pid_min) I[i] = motor_pid_min;
+        lastError[i] = error[i];
+      } 
+  }
+}
+
+// Matrix Odometry : N = 4, Heading Offset = 45, Robot Radius = 1.0, Wheel Radius = 0.03
+float m_odometry[2][4] = {
+    {-0.010607f, -0.010607f, 0.010607f, 0.010607f},
+    {0.010607f, -0.010607f, -0.010607f, 0.010607f}
+};
+
+TaskHandle_t Task_odometryTimerLoop = NULL;
+void odometryTimerLoop(void *parameter){
+  for(;;){
+    currentTime_odom = millis();
+    deltaTime_odom = currentTime_odom - previousTime_odom;
+    float dt = deltaTime_odom / 1000.0f;
+    
+    for (int i = 0; i < NUM_OF_MOTORS; i++){
+      delta_encoder[i] = encoder_cnt[i] - encoder_last_cnt[i];
+      theta_dot[i] = (delta_encoder[i] / ENCODER_PPR) * 2.0 * PI / dt;
+      velocity_wheel[i] = theta_dot[i] * R_WHEEL;
+    }
+  
+    robotOodometry(m_odometry, velocity_wheel, RobotActualPositionTheta, velocity_robot);
+  
+    v_robot_l_x = velocity_robot[0];
+    v_robot_l_y = velocity_robot[1];
+    
+    RobotActualPositionX += v_robot_l_x * dt;
+    RobotActualPositionY += v_robot_l_y * dt;
+  
+    previousTime_odom = currentTime_odom;
+    for (int i = 0; i < NUM_OF_MOTORS; i++){encoder_last_cnt[i] = encoder_cnt[i];} 
+  }
+}
 
 void setup() {
   Serial.begin(115200);
@@ -244,6 +342,38 @@ void setup() {
   timerAttachInterrupt(timer20ms, &onTimer, true);
   timerAlarmWrite(timer20ms, 20000, true);
   timerAlarmEnable(timer20ms);
+
+  xTaskCreatePinnedToCore(
+    encoderAll_RPM,               // Task function
+    "encoderAll_RPM",             // Task name
+    10000,                        // Stack size (bytes)
+    NULL,                         // Parameters
+    1,                            // Priority
+    &Task_ReadencoderAll_RPM,     // Task handle
+    1                             // Core 1
+  );
+
+  xTaskCreatePinnedToCore(
+    MotorRPMWithPID,              // Task function
+    "MotorRPMWithPID",            // Task name
+    10000,                        // Stack size (bytes)
+    NULL,                         // Parameters
+    1,                            // Priority
+    &Task_MotorRPMWithPID,        // Task handle
+    1                             // Core 1
+  );
+
+  xTaskCreatePinnedToCore(
+    odometryTimerLoop,            // Task function
+    "odometryTimerLoop",          // Task name
+    10000,                        // Stack size (bytes)
+    NULL,                         // Parameters
+    1,                            // Priority
+    &Task_odometryTimerLoop,      // Task handle
+    1                             // Core 1
+  );
+
+  
 
   ledcSetup(pwmChannel1, frequency, resolution);
   ledcAttachPin(PIN_MOT_1A, pwmChannel1); pinMode(PIN_MOT_1B, OUTPUT);
@@ -269,16 +399,20 @@ void setup() {
   SetPIDMinMax(-255, 255);
   SetPIDGainYaw(10, 0, 5);
   
-  SetPIDGainRPM(0.01,0.1,0);
-  SetPointRPM(0,0,0,0);
+  SetPIDMotor(0.01,0.1,0);
   
-  SetPIDGainOdomX(100,0,0);
-  SetPIDGainOdomY(100,0,0);
-  SetPIDGainOdomTheta(5,0,0);
+  SetPIDGainOdomX(0,0,0);
+  SetPIDGainOdomY(0,0,0);
+  SetPIDGainOdomTheta(0,0,0);
   
   for(int i = 0; i < NUM_OF_MOTORS; i++){encoder_cnt[i] = 0;}
   previousTime_odom = millis();
+  
   RobotBootScreen();
+  SetMotorRPM(10, 10, 10, 10);
+  enableMotorControl = true;
+  
+//  enablePositionControl = false;
 }
 
 void loop() {
@@ -290,42 +424,4 @@ void loop() {
   while (menu == 7) {RobotHoldPosition();}
   while (menu == 8) {RobotJoystickControl();}
   while (menu == 9) {RobotOdometry();}
-
-//  if (flag_20ms) {flag_20ms = false; odometryTimerLoop();}
-//  setRobotPosition(10,0,0,50);
-//RobotOdometry();
-
-//  Serial.print(theta_dot[0]); Serial.print("\t");
-//  Serial.print(theta_dot[1]); Serial.print("\t");
-//  Serial.print(theta_dot[2]); Serial.print("\t");
-//  Serial.print(theta_dot[3]); Serial.print("\t");
-//
-//  Serial.print(velocity_wheel[0],2); Serial.print("\t");
-//  Serial.print(velocity_wheel[1],2); Serial.print("\t");
-//  Serial.print(velocity_wheel[2],2); Serial.print("\t");
-//  Serial.print(velocity_wheel[3],2); Serial.print("\t");
-//
-//  Serial.print(velocity_robot[0],2); Serial.print("\t");
-//  Serial.print(velocity_robot[1],2); Serial.print("\t");
-//
-//  Serial.print(v_robot_l_x); Serial.print("\t");
-//  Serial.print(RobotActualPositionTheta); Serial.print("\t");
-//
-//  Serial.print(RobotActualPositionX); Serial.print("\t");
-//  Serial.print(RobotActualPositionY); Serial.print("\t");
-//  Serial.println();
-
-//  delay(100);
-
-//InverseKinematicsNoPID(10,0,0,50,OFFSET_HEADING,NUM_OF_MOTORS,R_WHEEL,R_ROBOT); //robot bergerak ke kanan (sumbu x+)
-//delay(500);
-//
-//InverseKinematicsNoPID(0,10,0,50,OFFSET_HEADING,NUM_OF_MOTORS,R_WHEEL,R_ROBOT); //robot bergerak ke depan (sumbu y+) 
-//delay(500);
-//
-//InverseKinematicsNoPID(-10,0,0,50,OFFSET_HEADING,NUM_OF_MOTORS,R_WHEEL,R_ROBOT); //robot bergerak ke kiri (sumbu x-)
-//delay(500);
-//
-//InverseKinematicsNoPID(0,-10,0,50,OFFSET_HEADING,NUM_OF_MOTORS,R_WHEEL,R_ROBOT); //robot bergerak ke belakang (sumbu y-)
-//delay(500);
 }

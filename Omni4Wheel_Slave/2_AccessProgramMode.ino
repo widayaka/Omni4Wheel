@@ -41,7 +41,9 @@ void RobotHoldPosition(){
 
 void RobotJoystickControl(){
   SerialDataReceived(); SerialDataParsing(); SerialDataConversion(); SerialDataReset();
+  
   InverseKinematicsNoPID(SerialData[1], SerialData[2], SerialData[3], 255, 45, 4, R_WHEEL, R_ROBOT);
+  
   if (SerialData[0] == 0 || SerialData[0] == 1) menu = 0;
 }
 
@@ -66,8 +68,6 @@ void RobotOdometry(){
   
   display.display();
   
-  if (flag_20ms){flag_20ms = false; odometryTimerLoop();}
-  
 //  setRobotPosition(1,0,setPointYaw,150);
 
   if (SerialData[0] == 0 || SerialData[0] == 1) menu = 0;
@@ -75,19 +75,13 @@ void RobotOdometry(){
 }
 
 void RobotObjectTracking(){
-  SerialDataReceived(); 
-  SerialDataParsing(); 
-  SerialDataConversion(); 
-  SerialDataReset();
+  SerialDataReceived(); SerialDataParsing(); SerialDataConversion(); SerialDataReset();
 
   if (SerialData[0] == 0 || SerialData[0] == 1) menu = 0;
 }
 
 void RobotROS2Navigation(){
-  SerialDataReceived(); 
-  SerialDataParsing(); 
-  SerialDataConversion(); 
-  SerialDataReset();
+  SerialDataReceived(); SerialDataParsing(); SerialDataConversion(); SerialDataReset();
 
   if (SerialData[0] == 0 || SerialData[0] == 1) menu = 0;
 }
