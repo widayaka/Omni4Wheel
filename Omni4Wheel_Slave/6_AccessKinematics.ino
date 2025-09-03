@@ -13,7 +13,7 @@
 //  }
 //}
 
-void drive(float speed_global_x, float speed_global_y, float speed_angular_w, float maxSpeed, float offset_heading, int number_of_wheels, float wheelRadius, float robotRadius, float &motorOut){
+void drive(float speed_global_x, float speed_global_y, float speed_angular_w, float maxSpeed, float offset_heading, int number_of_wheels, float wheelRadius, float robotRadius, float *motorOut){
   float del_angle = 360.0f / number_of_wheels;
   float motor[number_of_wheels];
   
@@ -31,6 +31,7 @@ void drive(float speed_global_x, float speed_global_y, float speed_angular_w, fl
     if (motor[i] > motor_pid_max) motor[i] = motor_pid_max;
     if (motor[i] < motor_pid_min) motor[i] = motor_pid_min;
   }
+  memcpy(motorOut, motor, sizeof(motor));
 }
 
 void robotOodometry(float MI[2][4], float T[4], float angle, float output[2]) {

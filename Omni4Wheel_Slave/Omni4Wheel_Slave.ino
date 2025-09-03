@@ -304,6 +304,7 @@ void MotorRPMWithPID(void *parameter){
     }
     
     for (int i = 0; i < NUM_OF_MOTORS; i++){    
+      setPoint_velocity[i] = velocity_wheel[i];
       error[i] = (setPoint_velocity[i] - encoder_velocity[i]);
       P[i] = (float)(error[i] * motor_p);
       I[i] += error[i] * motor_i;
@@ -389,6 +390,8 @@ void robotSetPosition(void *parameter){
     if (VelocityRobotX > robotWaypoint[4][0]) VelocityRobotX = robotWaypoint[4][0];
     if (VelocityRobotY > robotWaypoint[4][0]) VelocityRobotY = robotWaypoint[4][0];
     if (VelocityRobotZ > robotWaypoint[4][0]) VelocityRobotZ = robotWaypoint[4][0];
+
+    drive(VelocityRobotX, VelocityRobotY, VelocityRobotZ, robotWaypoint[4][0], OFFSET_HEADING, NUM_OF_MOTORS, R_WHEEL, R_ROBOT, velocity_wheel);
 
     vTaskDelay(20 / portTICK_PERIOD_MS);
   }
