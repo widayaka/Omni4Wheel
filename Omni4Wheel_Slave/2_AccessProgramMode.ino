@@ -1,5 +1,6 @@
 void RobotHoldPosition(){
   SerialDataReceived(); SerialDataParsing(); SerialDataConversion(); SerialDataReset();
+  
   display.clearDisplay(); display.setTextSize(1); display.setTextColor(SSD1306_WHITE);
 
   float DataYaw = SerialData[1];
@@ -42,7 +43,7 @@ void RobotHoldPosition(){
 void RobotJoystickControl(){
   SerialDataReceived(); SerialDataParsing(); SerialDataConversion(); SerialDataReset();
   
-  InverseKinematicsNoPID(SerialData[1], SerialData[2], SerialData[3], 255, 45, 4, R_WHEEL, R_ROBOT);
+//  InverseKinematicsNoPID(SerialData[1], SerialData[2], SerialData[3], 255, 45, 4, R_WHEEL, R_ROBOT);
   
   if (SerialData[0] == 0 || SerialData[0] == 1) menu = 0;
 }

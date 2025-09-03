@@ -47,9 +47,7 @@
 #define R_WHEEL 0.03
 #define R_ROBOT 0.1
 
-//#define OFFSET_HEADING 0    // Posisi roda 1 berada pada sudut 0 derajat dari sumbu x sehingga arah hadap robot berada pada sumbu x (konfigurasi frame robot +)
 #define OFFSET_HEADING 45   // Posisi roda 1 berada pada sudut 45 derajat dari sumbu x sehingga arah hadap robot berada pada sumbu y (konfigurasi frame robot X)
-//#define OFFSET_HEADING -45  // Posisi roda 1 berada pada sudut -45 derajat dari sumbu x sehingga arah hadap robot berada pada sumbu x (konfigurasi frame robot X)
 
 #define PI 3.14159265359
 #define CW 0
@@ -67,14 +65,13 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #define SLAVE_SERIAL_BAUDRATE 115200
 HardwareSerial SlaveSerial2(2);
 
-float speed_motor_encoder[NUM_OF_MOTORS];
-
-int16_t encoder_cnt[NUM_OF_MOTORS];
+volatile int16_t encoder_cnt[NUM_OF_MOTORS];
 int16_t encoder_prev_cnt[NUM_OF_MOTORS];
 int16_t encoder_last_cnt[NUM_OF_MOTORS];
 int16_t encoder_velocity[NUM_OF_MOTORS];
 int16_t DistanceTravelledByWheel[NUM_OF_MOTORS];
 
+float speed_motor_encoder[NUM_OF_MOTORS];
 float setPoint_velocity[NUM_OF_MOTORS];
 
 float P[NUM_OF_MOTORS], P_w[NUM_OF_MOTORS];
@@ -86,14 +83,15 @@ float KP[NUM_OF_MOTORS];
 float KI[NUM_OF_MOTORS];
 float KD[NUM_OF_MOTORS];
 
+float motor_p;
+float motor_i;
+float motor_d;
+
 float motor_pid_min;
 float motor_pid_max;
 
 float error[NUM_OF_MOTORS];
 float lastError[NUM_OF_MOTORS];
-float motor_p;
-float motor_i;
-float motor_d;
 
 float motor[NUM_OF_MOTORS];
 float motor_setPoint[NUM_OF_MOTORS];
@@ -143,6 +141,24 @@ float KD_theta;
 float errorPosTheta;
 float lastErrorPosTheta;
 float PID_theta;
+
+float P_odom;
+float I_odom;
+float D_odom;
+float KP_odom;
+float KI_odom;
+float KD_odom;
+float PID_odom;
+
+bool statusWaypointReached;
+
+#define NUM_OF_WAYPOINTS 1
+float robotWaypoint[4][NUM_OF_WAYPOINTS] = {0.5, 0, 0, 100};
+
+float RobotSetPointX = 0.0;
+float RobotSetPointY = 0.0;
+float RobotSetPointTheta = 0.0;
+float RobotSetPointSpeed = 0.0;
 
 float RobotActualPositionX = 0.0;
 float RobotActualPositionY = 0.0;
@@ -274,26 +290,34 @@ void encoderAll_RPM(void *parameter){
         encoder_prev_cnt[i] = encoder_cnt[i];
       }
     }
-  } 
+    vTaskDelay(20 / portTICK_PERIOD_MS);
+  }
 }
 
 bool enableMotorControl;
 TaskHandle_t Task_MotorRPMWithPID = NULL;
 void MotorRPMWithPID(void *parameter){
   for(;;){
-    if (!enableMotorControl) return;
-      for (int i = 0; i < NUM_OF_MOTORS; i++){    
-        error[i] = (setPoint_velocity[i] - encoder_velocity[i]);
-        P[i] = (float)(error[i] * motor_p);
-        I[i] += error[i] * motor_i;
-        D[i] = (error[i] - lastError[i]) * motor_d;
-        PIDForRPM[i] = P[i] + I[i] + D[i];
-        if (PIDForRPM[i] > motor_pid_max) PIDForRPM[i] = motor_pid_max;
-        if (PIDForRPM[i] < motor_pid_min) PIDForRPM[i] = motor_pid_min;
-        if (I[i] > motor_pid_max) I[i] = motor_pid_max;
-        if (I[i] < motor_pid_min) I[i] = motor_pid_min;
-        lastError[i] = error[i];
-      } 
+    if (!enableMotorControl) {
+      vTaskDelay(20 / portTICK_PERIOD_MS); // tidur sebentar
+      continue; // lanjut loop
+    }
+    
+    for (int i = 0; i < NUM_OF_MOTORS; i++){    
+      error[i] = (setPoint_velocity[i] - encoder_velocity[i]);
+      P[i] = (float)(error[i] * motor_p);
+      I[i] += error[i] * motor_i;
+      D[i] = (error[i] - lastError[i]) * motor_d;
+      PIDForRPM[i] = P[i] + I[i] + D[i];
+      if (PIDForRPM[i] > motor_pid_max) PIDForRPM[i] = motor_pid_max;
+      if (PIDForRPM[i] < motor_pid_min) PIDForRPM[i] = motor_pid_min;
+      if (I[i] > motor_pid_max) I[i] = motor_pid_max;
+      if (I[i] < motor_pid_min) I[i] = motor_pid_min;
+      lastError[i] = error[i];
+    }
+
+    DriveMotor(PIDForRPM[0], PIDForRPM[1], PIDForRPM[2], PIDForRPM[3]);
+    vTaskDelay(20 / portTICK_PERIOD_MS); 
   }
 }
 
@@ -325,7 +349,48 @@ void odometryTimerLoop(void *parameter){
     RobotActualPositionY += v_robot_l_y * dt;
   
     previousTime_odom = currentTime_odom;
-    for (int i = 0; i < NUM_OF_MOTORS; i++){encoder_last_cnt[i] = encoder_cnt[i];} 
+    for (int i = 0; i < NUM_OF_MOTORS; i++){encoder_last_cnt[i] = encoder_cnt[i];}
+    vTaskDelay(20 / portTICK_PERIOD_MS);
+  }
+}
+
+bool enablePositionControl;
+TaskHandle_t Task_robotSetPosition = NULL;
+void robotSetPosition(void *parameter){
+  for(;;){
+    if (!enablePositionControl) {
+      vTaskDelay(20 / portTICK_PERIOD_MS); // tidur sebentar
+      continue; // lanjut loop
+    }
+    
+    for (int i = 0; i < 4; i++){
+      for (int j = 0; j <= NUM_OF_WAYPOINTS+; j++){
+        if (i == 0) RobotSetPointX = robotWaypoint[i][j];
+        if (i == 1) RobotSetPointY = robotWaypoint[i][j];
+        if (i == 2) RobotSetPointTheta = robotWaypoint[i][j];
+      }
+    }
+
+    errorPosXAxis = RobotSetPointX - RobotActualPositionX;
+    errorPosYAxis = RobotSetPointY - RobotActualPositionY;
+    errorPosTheta = RobotSetPointTheta - RobotActualPositionTheta;
+
+    if (errorPosTheta > 180){errorPosTheta = errorPosTheta - 360;}
+    else if (errorPosTheta < -180){errorPosTheta = errorPosTheta + 360;}
+
+    TotalDistanceTravelledByRobot = sqrt((errorPosXAxis*errorPosXAxis) + (errorPosYAxis*errorPosYAxis));
+
+    P_odom = KP_odom * TotalDistanceTravelledByRobot;
+
+    VelocityRobotX = PID_xAxis * errorPosXAxis / TotalDistanceTravelledByRobot;
+    VelocityRobotY = PID_yAxis * errorPosYAxis / TotalDistanceTravelledByRobot;
+    VelocityRobotZ = 0;
+
+    if (VelocityRobotX > robotWaypoint[4][0]) VelocityRobotX = robotWaypoint[4][0];
+    if (VelocityRobotY > robotWaypoint[4][0]) VelocityRobotY = robotWaypoint[4][0];
+    if (VelocityRobotZ > robotWaypoint[4][0]) VelocityRobotZ = robotWaypoint[4][0];
+
+    vTaskDelay(20 / portTICK_PERIOD_MS);
   }
 }
 
@@ -346,50 +411,70 @@ void setup() {
   xTaskCreatePinnedToCore(
     encoderAll_RPM,               // Task function
     "encoderAll_RPM",             // Task name
-    10000,                        // Stack size (bytes)
+    4096,                        // Stack size (bytes)
     NULL,                         // Parameters
     1,                            // Priority
     &Task_ReadencoderAll_RPM,     // Task handle
-    1                             // Core 1
+    0                             // Core
   );
 
   xTaskCreatePinnedToCore(
     MotorRPMWithPID,              // Task function
     "MotorRPMWithPID",            // Task name
-    10000,                        // Stack size (bytes)
+    4096,                        // Stack size (bytes)
     NULL,                         // Parameters
     1,                            // Priority
     &Task_MotorRPMWithPID,        // Task handle
-    1                             // Core 1
+    0                             // Core 1
   );
 
   xTaskCreatePinnedToCore(
     odometryTimerLoop,            // Task function
     "odometryTimerLoop",          // Task name
-    10000,                        // Stack size (bytes)
+    4096,                        // Stack size (bytes)
     NULL,                         // Parameters
     1,                            // Priority
     &Task_odometryTimerLoop,      // Task handle
-    1                             // Core 1
+    0                             // Core 1
   );
 
-  
+  xTaskCreatePinnedToCore(
+    robotSetPosition,            // Task function
+    "robotSetPosition",          // Task name
+    4096,                        // Stack size (bytes)
+    NULL,                         // Parameters
+    1,                            // Priority
+    &Task_robotSetPosition,      // Task handle
+    0                             // Core 1
+  );
 
   ledcSetup(pwmChannel1, frequency, resolution);
-  ledcAttachPin(PIN_MOT_1A, pwmChannel1); pinMode(PIN_MOT_1B, OUTPUT);
-  attachInterrupt(digitalPinToInterrupt(PIN_ENC_1A), encoder1_ISR, CHANGE); pinMode(PIN_ENC_1B, INPUT);
+  ledcAttachPin(PIN_MOT_1A, pwmChannel1); 
+  pinMode(PIN_MOT_1B, OUTPUT);
+  pinMode(PIN_ENC_1A, INPUT_PULLUP);
+  pinMode(PIN_ENC_1B, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(PIN_ENC_1A), encoder1_ISR, CHANGE); 
   
   ledcSetup(pwmChannel2, frequency, resolution);
-  ledcAttachPin(PIN_MOT_2A, pwmChannel2); pinMode(PIN_MOT_2B, OUTPUT);
-  attachInterrupt(digitalPinToInterrupt(PIN_ENC_2A), encoder2_ISR, CHANGE); pinMode(PIN_ENC_2B, INPUT_PULLUP);
+  ledcAttachPin(PIN_MOT_2A, pwmChannel2); 
+  pinMode(PIN_MOT_2B, OUTPUT);
+  pinMode(PIN_ENC_2A, INPUT_PULLUP);
+  pinMode(PIN_ENC_2B, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(PIN_ENC_2A), encoder2_ISR, CHANGE); 
 
   ledcSetup(pwmChannel3, frequency, resolution);
-  ledcAttachPin(PIN_MOT_3A, pwmChannel3); pinMode(PIN_MOT_3B, OUTPUT);
-  attachInterrupt(digitalPinToInterrupt(PIN_ENC_3A), encoder3_ISR, CHANGE); pinMode(PIN_ENC_3B, INPUT_PULLUP);
+  ledcAttachPin(PIN_MOT_3A, pwmChannel3); 
+  pinMode(PIN_MOT_3B, OUTPUT);
+  pinMode(PIN_ENC_3A, INPUT_PULLUP);
+  pinMode(PIN_ENC_3B, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(PIN_ENC_3A), encoder3_ISR, CHANGE); 
 
   ledcSetup(pwmChannel4, frequency, resolution);
-  ledcAttachPin(PIN_MOT_4A, pwmChannel4); pinMode(PIN_MOT_4B, OUTPUT);
-  attachInterrupt(digitalPinToInterrupt(PIN_ENC_4A), encoder4_ISR, CHANGE); pinMode(PIN_ENC_4B, INPUT_PULLUP);
+  ledcAttachPin(PIN_MOT_4A, pwmChannel4); 
+  pinMode(PIN_MOT_4B, OUTPUT);
+  pinMode(PIN_ENC_4A, INPUT_PULLUP);
+  pinMode(PIN_ENC_4B, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(PIN_ENC_4A), encoder4_ISR, CHANGE); 
 
   if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
     Serial.println(F("SSD1306 allocation failed"));
@@ -400,6 +485,12 @@ void setup() {
   SetPIDGainYaw(10, 0, 5);
   
   SetPIDMotor(0.01,0.1,0);
+
+  enableMotorControl = true;
+  SetPointRPM(100, 100, 100, 100);
+  
+  enablePositionControl = false;
+  SetPIDGainOdomRobot(10,0,0);
   
   SetPIDGainOdomX(0,0,0);
   SetPIDGainOdomY(0,0,0);
@@ -407,21 +498,17 @@ void setup() {
   
   for(int i = 0; i < NUM_OF_MOTORS; i++){encoder_cnt[i] = 0;}
   previousTime_odom = millis();
-  
   RobotBootScreen();
-  SetMotorRPM(10, 10, 10, 10);
-  enableMotorControl = true;
-  
-//  enablePositionControl = false;
 }
 
 void loop() {
-  while (menu == 0) {RobotHomeScreen();}
-  while (menu == 1) {RobotMenuEncoder();}
-  while (menu == 2) {RobotMenuMotor();}
-
-  while (menu == 6) {RobotOdometry();}
-  while (menu == 7) {RobotHoldPosition();}
-  while (menu == 8) {RobotJoystickControl();}
-  while (menu == 9) {RobotOdometry();}
+//  while (menu == 0) {RobotHomeScreen();}
+//  while (menu == 1) {RobotMenuEncoder();}
+//  while (menu == 2) {RobotMenuMotor();}
+//
+//  while (menu == 6) {RobotOdometry();}
+//  while (menu == 7) {RobotHoldPosition();}
+//  while (menu == 8) {RobotJoystickControl();}
+//  while (menu == 9) {RobotOdometry();}
+Serial.println(PIDForRPM[0]);
 }

@@ -13,19 +13,7 @@
 //  }
 //}
 
-// Matrix Odometry : N = 4, Heading Offset = 45, Robot Radius = 1.0, Wheel Radius = 0.6
-//float m_odometry[2][4] = {
-//    {-0.212132f, -0.212132f, 0.212132f, 0.212132f},
-//    {0.212132f, -0.212132f, -0.212132f, 0.212132f}
-//};
-
-// Matrix Odometry : N = 4, Heading Offset = 45, Robot Radius = 1.0, Wheel Radius = 0.06
-//float m_odometry[2][4] = {
-//    {-0.021213f, -0.021213f, 0.021213f, 0.021213f},
-//    {0.021213f, -0.021213f, -0.021213f, 0.021213f}
-//};
-
-void InverseKinematicsNoPID(float speed_global_x, float speed_global_y, float speed_angular_w, float maxSpeed, float offset_heading, int number_of_wheels, float wheelRadius, float robotRadius){
+void drive(float speed_global_x, float speed_global_y, float speed_angular_w, float maxSpeed, float offset_heading, int number_of_wheels, float wheelRadius, float robotRadius, float &motorOut){
   float del_angle = 360.0f / number_of_wheels;
   float motor[number_of_wheels];
   
@@ -43,65 +31,6 @@ void InverseKinematicsNoPID(float speed_global_x, float speed_global_y, float sp
     if (motor[i] > motor_pid_max) motor[i] = motor_pid_max;
     if (motor[i] < motor_pid_min) motor[i] = motor_pid_min;
   }
-  
-  DriveMotor(motor[0], 
-             motor[1], 
-             motor[2], 
-             motor[3]);
-}
-
-void InverseKinematicsWithPID(float x, float y, float w, float offset_heading, int number_of_wheels){
-  float del_angle = 360.0f / number_of_wheels;
-  float motor[number_of_wheels];
-   
-//  for(int i = 0; i < number_of_wheels; i++){
-//    float angleDeg = (del_angle * i) + offset_heading;
-//    float angleRad = angleDeg * PI / 180.0f;
-//    
-//    motor[i] = (-x * sinf(angleRad)) / R_WHEEL;
-//    motor[i] += (y * cosf(angleRad)) / R_WHEEL;
-//    motor[i] += (w * R_ROBOT) / R_WHEEL;
-//      
-//    if (motor[i] > 255)  motor[i] = 255;
-//    if (motor[i] < -255) motor[i] = -255;
-//
-//    error[i] = (motor[i] - encoder_velocity[i]);
-//    P[i] = error[i] * motor_p;
-//    I[i] += error[i] * motor_i;
-//    D[i] = (error[i] - lastError[i]) * motor_d;
-//    PIDForRPM[i] = P[i] + I[i] + D[i];
-//
-//    if (PIDForRPM[i] > motor_pid_max) PIDForRPM[i] = motor_pid_max;
-//    if (PIDForRPM[i] < motor_pid_min) PIDForRPM[i] = motor_pid_min;
-//
-//    if (I[i] > motor_pid_max) I[i] = motor_pid_max;
-//    if (I[i] < motor_pid_min) I[i] = motor_pid_min;
-//
-//    if (error[i] == 0) I[i] = 0;
-//    
-//    lastError[i] = error[i];
-//  }
-  
-  DriveMotor(PIDForRPM[0], PIDForRPM[1], PIDForRPM[2], PIDForRPM[3]);
-
-  display.clearDisplay(); display.setTextSize(1); display.setTextColor(SSD1306_WHITE);
-
-  display.setCursor(0,0);   display.print("SP RPM: ");  
-  display.setCursor(45,0);  display.print(motor[0]);
-  
-  display.setCursor(0,10);  display.print("RPM1: ");
-  display.setCursor(30,10);  display.print(encoder_velocity[0]);
-
-  display.setCursor(60,10);  display.print("RPM2: ");
-  display.setCursor(90,10);  display.print(encoder_velocity[1]);
-
-  display.setCursor(0,20);  display.print("RPM3: ");
-  display.setCursor(30,20);  display.print(encoder_velocity[2]);
-
-  display.setCursor(60,20);  display.print("RPM4: ");
-  display.setCursor(90,20);  display.print(encoder_velocity[3]);
-  
-  display.display();
 }
 
 void robotOodometry(float MI[2][4], float T[4], float angle, float output[2]) {
@@ -194,7 +123,7 @@ void setRobotPosition(float setPointPosX, float setPointPosY, float setPointPosT
   if (PID_theta > velocity) PID_theta = velocity;
   if (PID_theta < -velocity) PID_theta = -velocity;
 
-  InverseKinematicsNoPID(VelocityRobotX, VelocityRobotY, VelocityRobotZ, velocity, OFFSET_HEADING, 4, R_WHEEL, R_ROBOT);
+//  InverseKinematicsNoPID(VelocityRobotX, VelocityRobotY, VelocityRobotZ, velocity, OFFSET_HEADING, 4, R_WHEEL, R_ROBOT);
 
   Serial.print("SPX:"); Serial.print("\t");
   Serial.print(setPointPosX); Serial.print("\t");
