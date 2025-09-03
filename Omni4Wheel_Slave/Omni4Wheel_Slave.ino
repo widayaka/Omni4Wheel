@@ -364,7 +364,7 @@ void robotSetPosition(void *parameter){
     }
     
     for (int i = 0; i < 4; i++){
-      for (int j = 0; j <= NUM_OF_WAYPOINTS+; j++){
+      for (int j = 0; j < NUM_OF_WAYPOINTS; j++){
         if (i == 0) RobotSetPointX = robotWaypoint[i][j];
         if (i == 1) RobotSetPointY = robotWaypoint[i][j];
         if (i == 2) RobotSetPointTheta = robotWaypoint[i][j];
@@ -484,12 +484,12 @@ void setup() {
   SetPIDMinMax(-255, 255);
   SetPIDGainYaw(10, 0, 5);
   
-  SetPIDMotor(0.01,0.1,0);
-
-  enableMotorControl = true;
-  SetPointRPM(100, 100, 100, 100);
   
-  enablePositionControl = false;
+  enableMotorControl = true;
+  SetPIDMotor(0.01,0.1,0);
+  SetPointRPM(0, 0, 0, 0);
+  
+  enablePositionControl = true;
   SetPIDGainOdomRobot(10,0,0);
   
   SetPIDGainOdomX(0,0,0);
