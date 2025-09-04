@@ -515,7 +515,6 @@ void setup() {
   
   enableMotorControl = true;
   SetPIDMotor(0.01, 0.1, 0.001);
-//  SetPointRPM(250, 250, 250, 250);
   
   enablePositionControl = true;
   SetPIDGainOdomRobot(50,0,0);
@@ -526,15 +525,15 @@ void setup() {
 }
 
 void loop() {
-  setRobotPosition(0.5, 0.5, 0, 100, 100);
-  Serial << RobotSetPointX << " " << RobotActualPositionX << " " << errorPosXAxis << " " << TotalDistanceTravelledByRobot << " " << PID_velocity << " " << VelocityRobotX << " " << setPoint_motor[0] << "\n";
+//  setRobotPosition(0.5, 0.5, 0, 100, 100);
+//  Serial << RobotSetPointX << " " << RobotActualPositionX << " " << errorPosXAxis << " " << TotalDistanceTravelledByRobot << " " << PID_velocity << " " << VelocityRobotX << " " << setPoint_motor[0] << "\n";
 //  setRobotSpeed(50,0,0);
-//  while (menu == 0) {RobotHomeScreen();}
-//  while (menu == 1) {RobotMenuEncoder();}
-//  while (menu == 2) {RobotMenuMotor();}
+  while (menu == 0) {RobotHomeScreen();}
+  while (menu == 1) {RobotMenuEncoder();}
+  while (menu == 2) {RobotMenuMotor();}
 
-//  while (menu == 6) {RobotOdometry();}
-//  while (menu == 7) {RobotHoldPosition();}
-//  while (menu == 8) {RobotJoystickControl();}
-//  while (menu == 9) {RobotOdometry();}
+  while (menu == 6) {RobotOdometry();}
+  while (menu == 7) {RobotHoldPosition();}
+  while (menu == 8) {RobotJoystickControl();}
+  while (menu == 9) {RobotOdometry();}
 }
