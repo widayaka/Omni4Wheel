@@ -69,15 +69,17 @@ volatile int16_t encoder_cnt[NUM_OF_MOTORS];
 int16_t encoder_prev_cnt[NUM_OF_MOTORS];
 int16_t encoder_last_cnt[NUM_OF_MOTORS];
 int16_t encoder_velocity[NUM_OF_MOTORS];
-int16_t DistanceTravelledByWheel[NUM_OF_MOTORS];
 
 float speed_motor_encoder[NUM_OF_MOTORS];
 float setPoint_velocity[NUM_OF_MOTORS];
+float setPoint_motor[NUM_OF_MOTORS];
+float error[NUM_OF_MOTORS];
+float lastError[NUM_OF_MOTORS];
 
-float P[NUM_OF_MOTORS], P_w[NUM_OF_MOTORS];
-float I[NUM_OF_MOTORS], I_w[NUM_OF_MOTORS];
-float D[NUM_OF_MOTORS], D_w[NUM_OF_MOTORS];
-float PIDForRPM[NUM_OF_MOTORS], PID_w[NUM_OF_MOTORS];
+float P[NUM_OF_MOTORS];
+float I[NUM_OF_MOTORS];
+float D[NUM_OF_MOTORS];
+float PIDForRPM[NUM_OF_MOTORS];
 
 float KP[NUM_OF_MOTORS];
 float KI[NUM_OF_MOTORS];
@@ -89,13 +91,6 @@ float motor_d;
 
 float motor_pid_min;
 float motor_pid_max;
-
-float error[NUM_OF_MOTORS];
-float lastError[NUM_OF_MOTORS];
-
-float motor[NUM_OF_MOTORS];
-float motor_setPoint[NUM_OF_MOTORS];
-float pwm_motor[NUM_OF_MOTORS];
 
 float setPointYaw;
 float errorYaw;
@@ -150,7 +145,7 @@ float KI_odom;
 float KD_odom;
 float PID_odom;
 
-bool statusWaypointReached;
+bool statusWaypointReached = false;
 
 #define NUM_OF_WAYPOINTS 2
 float robotWaypoint[NUM_OF_WAYPOINTS][4] = {
@@ -158,14 +153,20 @@ float robotWaypoint[NUM_OF_WAYPOINTS][4] = {
   {0, 0.5, 0, 50}
 };
 
+/*
+ *  Odometry Properties
+ */
+
 float RobotSetPointX = 0.0;
 float RobotSetPointY = 0.0;
 float RobotSetPointTheta = 0.0;
-float RobotSetPointSpeed = 0.0;
 
 float RobotActualPositionX = 0.0;
 float RobotActualPositionY = 0.0;
 float RobotActualPositionTheta = 0.0;
+
+float maxSpeedRobotLin = 0;
+float maxSpeedRobotAng = 0;
 
 float DistanceRobotToTarget = 0.0;
 float TotalDistanceTravelledByRobot = 0.0;
@@ -174,6 +175,8 @@ float VelocityRobotX = 0.0;
 float VelocityRobotY = 0.0;
 float VelocityRobotZ = 0.0;
 
+float PID_velocity;
+
 float ErrorPositionX = 0.0;
 float ErrorPositionY = 0.0;
 float ErrorPositionTheta = 0.0;
@@ -181,7 +184,8 @@ float ErrorPositionTheta = 0.0;
 float v_robot_l_x = 0.0;
 float v_robot_l_y = 0.0;
 
-unsigned long currentTime_odom, previousTime_odom;
+unsigned long currentTime_odom;
+unsigned long previousTime_odom;
 
 float velocity_wheel[4];
 float velocity_robot[2];
@@ -278,10 +282,6 @@ hw_timer_t *timer20ms = NULL;
 volatile bool flag_20ms = false;
 void IRAM_ATTR onTimer() {flag_20ms = true;}
 
-void IRAM_ATTR ontTimer20ms(){
-  
-}
-
 TaskHandle_t Task_ReadencoderAll_RPM = NULL;
 void encoderAll_RPM(void *parameter){
   for(;;){
@@ -297,9 +297,9 @@ void encoderAll_RPM(void *parameter){
   }
 }
 
-bool enableMotorControl;
-TaskHandle_t Task_MotorRPMWithPID = NULL;
-void MotorRPMWithPID(void *parameter){
+bool enableMotorControl = true;
+TaskHandle_t Task_globalMotorControl = NULL;
+void globalMotorControl(void *parameter){
   for(;;){
     if (!enableMotorControl) {
       vTaskDelay(20 / portTICK_PERIOD_MS); // tidur sebentar
@@ -307,16 +307,21 @@ void MotorRPMWithPID(void *parameter){
     }
     
     for (int i = 0; i < NUM_OF_MOTORS; i++){    
-      setPoint_velocity[i] = velocity_wheel[i];
+     
       error[i] = (setPoint_velocity[i] - encoder_velocity[i]);
       P[i] = (float)(error[i] * motor_p);
       I[i] += error[i] * motor_i;
       D[i] = (error[i] - lastError[i]) * motor_d;
       PIDForRPM[i] = P[i] + I[i] + D[i];
+      
       if (PIDForRPM[i] > motor_pid_max) PIDForRPM[i] = motor_pid_max;
       if (PIDForRPM[i] < motor_pid_min) PIDForRPM[i] = motor_pid_min;
+      
       if (I[i] > motor_pid_max) I[i] = motor_pid_max;
       if (I[i] < motor_pid_min) I[i] = motor_pid_min;
+
+      if (error[i] == 0) I[i] = 0;
+      
       lastError[i] = error[i];
     }
     DriveMotor(PIDForRPM[0], PIDForRPM[1], PIDForRPM[2], PIDForRPM[3]);
@@ -358,19 +363,14 @@ void odometryTimerLoop(void *parameter){
 }
 
 int currentWaypointIndex = 0;
-bool enablePositionControl;
-TaskHandle_t Task_robotSetPosition = NULL;
-void robotSetPosition(void *parameter){
+bool enablePositionControl = true;
+TaskHandle_t Task_globalPositionControl = NULL;
+void globalPositionControl(void *parameter){
   for(;;){
     if (!enablePositionControl) {
       vTaskDelay(20 / portTICK_PERIOD_MS);
       continue;
     }
-
-    RobotSetPointX = robotWaypoint[currentWaypointIndex][0];
-    RobotSetPointY = robotWaypoint[currentWaypointIndex][1];
-    RobotSetPointTheta = robotWaypoint[currentWaypointIndex][2];
-    float maxSpeed = robotWaypoint[currentWaypointIndex][3];
     
     errorPosXAxis = RobotSetPointX - RobotActualPositionX;
     errorPosYAxis = RobotSetPointY - RobotActualPositionY;
@@ -382,33 +382,45 @@ void robotSetPosition(void *parameter){
     TotalDistanceTravelledByRobot = sqrt((errorPosXAxis*errorPosXAxis) + (errorPosYAxis*errorPosYAxis));
 
     P_odom = KP_odom * TotalDistanceTravelledByRobot;
+    PID_velocity = P_odom;
 
-    VelocityRobotX = P_odom * errorPosXAxis / TotalDistanceTravelledByRobot;
-    VelocityRobotY = P_odom * errorPosYAxis / TotalDistanceTravelledByRobot;
+    if (PID_velocity > maxSpeedRobotLin) PID_velocity = maxSpeedRobotLin;
+
+    P_theta = KP_theta * errorPosTheta;
+    I_theta = I_theta + errorPosTheta * KI_theta;
+    D_theta = (errorPosTheta - lastErrorPosTheta) * KD_theta;
+    PID_theta = P_theta + I_theta + D_theta;
+
+    if(PID_theta > maxSpeedRobotAng) PID_theta = maxSpeedRobotAng;
+    if(PID_theta < -maxSpeedRobotAng) PID_theta = -maxSpeedRobotAng;
+
+    VelocityRobotX = PID_velocity * errorPosXAxis / TotalDistanceTravelledByRobot;
+    VelocityRobotY = PID_velocity * errorPosYAxis / TotalDistanceTravelledByRobot;
     VelocityRobotZ = 0;
-
-    if (VelocityRobotX > maxSpeed) VelocityRobotX = maxSpeed;
-    if (VelocityRobotY > maxSpeed) VelocityRobotY = maxSpeed;
-    if (VelocityRobotZ > maxSpeed) VelocityRobotZ = maxSpeed;
-
-    drive(VelocityRobotX, VelocityRobotY, VelocityRobotZ, maxSpeed, OFFSET_HEADING, NUM_OF_MOTORS, R_WHEEL, R_ROBOT, velocity_wheel);
-
-    if (TotalDistanceTravelledByRobot < 0.01f){
-      if (currentWaypointIndex < NUM_OF_WAYPOINTS - 1) {
-        currentWaypointIndex++;   // pindah ke waypoint berikutnya
-      } 
+    
+    setRobotSpeed(VelocityRobotX, VelocityRobotY, VelocityRobotZ);
+    
+//    if (TotalDistanceTravelledByRobot < 0.01f){
+//      if (currentWaypointIndex < NUM_OF_WAYPOINTS - 1) {
+//        currentWaypointIndex++;   // pindah ke waypoint berikutnya
+//      } 
       
-      else {
-        // sudah di waypoint terakhir → stop
-        VelocityRobotX = 0;
-        VelocityRobotY = 0;
-        VelocityRobotZ = 0;
-        drive(0, 0, 0, 0, OFFSET_HEADING, NUM_OF_MOTORS, R_WHEEL, R_ROBOT, velocity_wheel);
-        SetPointRPM(0, 0, 0, 0);
-      }
-    }
+//      else {
+//        // sudah di waypoint terakhir → stop
+//        VelocityRobotX = 0;
+//        VelocityRobotY = 0;
+//        VelocityRobotZ = 0;
+//        setRobotSpeed(VelocityRobotX, VelocityRobotY, VelocityRobotZ);
+//      }
+//    }
     vTaskDelay(20 / portTICK_PERIOD_MS);
   }
+}
+
+template<class T>
+inline Print &operator<<(Print &obj, T arg) {
+  obj.print(arg);
+  return obj;
 }
 
 void setup() {
@@ -436,12 +448,12 @@ void setup() {
   );
 
   xTaskCreatePinnedToCore(
-    MotorRPMWithPID,              // Task function
-    "MotorRPMWithPID",            // Task name
+    globalMotorControl,              // Task function
+    "globalMotorControl",            // Task name
     4096,                        // Stack size (bytes)
     NULL,                         // Parameters
     1,                            // Priority
-    &Task_MotorRPMWithPID,        // Task handle
+    &Task_globalMotorControl,        // Task handle
     0                             // Core 1
   );
 
@@ -456,12 +468,12 @@ void setup() {
   );
 
   xTaskCreatePinnedToCore(
-    robotSetPosition,            // Task function
-    "robotSetPosition",          // Task name
+    globalPositionControl,            // Task function
+    "globalPositionControl",          // Task name
     4096,                        // Stack size (bytes)
     NULL,                         // Parameters
     1,                            // Priority
-    &Task_robotSetPosition,      // Task handle
+    &Task_globalPositionControl,      // Task handle
     0                             // Core 1
   );
 
@@ -503,15 +515,10 @@ void setup() {
   
   enableMotorControl = true;
   SetPIDMotor(0.01, 0.1, 0.001);
-  SetPointRPM(250, 250, 250, 250);
+//  SetPointRPM(250, 250, 250, 250);
   
   enablePositionControl = true;
-  SetPIDGainOdomRobot(100,0,0);
-  
-  SetPIDGainOdomX(0,0,0);
-  SetPIDGainOdomY(0,0,0);
-  SetPIDGainOdomTheta(0,0,0);
-  SetPIDGainOdomRobot(200,0,0);
+  SetPIDGainOdomRobot(50,0,0);
   
   for(int i = 0; i < NUM_OF_MOTORS; i++){encoder_cnt[i] = 0;}
   previousTime_odom = millis();
@@ -519,6 +526,9 @@ void setup() {
 }
 
 void loop() {
+  setRobotPosition(0.5, 0.5, 0, 100, 100);
+  Serial << RobotSetPointX << " " << RobotActualPositionX << " " << errorPosXAxis << " " << TotalDistanceTravelledByRobot << " " << PID_velocity << " " << VelocityRobotX << " " << setPoint_motor[0] << "\n";
+//  setRobotSpeed(50,0,0);
 //  while (menu == 0) {RobotHomeScreen();}
 //  while (menu == 1) {RobotMenuEncoder();}
 //  while (menu == 2) {RobotMenuMotor();}
@@ -527,19 +537,4 @@ void loop() {
 //  while (menu == 7) {RobotHoldPosition();}
 //  while (menu == 8) {RobotJoystickControl();}
 //  while (menu == 9) {RobotOdometry();}
-
-//Serial.print(currentWaypointIndex); Serial.print(" "); 
-//Serial.print(TotalDistanceTravelledByRobot); Serial.print(" "); 
-//Serial.print(errorPosXAxis); Serial.print(" ");
-//Serial.print(errorPosYAxis); Serial.print(" ");
-//Serial.print(encoder_velocity[0]); Serial.print(" ");
-//Serial.print(encoder_velocity[1]); Serial.print(" ");
-//Serial.print(encoder_velocity[2]); Serial.print(" ");
-//Serial.print(encoder_velocity[3]); Serial.print(" ");
-//Serial.print(setPoint_velocity[0]); Serial.print(" ");
-//Serial.print(setPoint_velocity[1]); Serial.print(" ");
-//Serial.print(setPoint_velocity[2]); Serial.print(" ");
-//Serial.print(setPoint_velocity[3]); Serial.print(" ");
-//Serial.println();
-//delay(100);
 }
