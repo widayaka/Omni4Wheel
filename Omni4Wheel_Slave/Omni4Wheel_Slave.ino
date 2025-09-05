@@ -1,30 +1,3 @@
-/*
- * Bismillahirrohmanirrohim
- * Project      : Omni 4 Wheel Slave Board Program
- * Author       : Parama Diptya Widayaka, S.ST., M.T.
- * Affiliation  : Universitas Negeri Surabaya
- *                Faculty of Engineering
- *                Department of Electrical Engineering
- *                Microprocessor Laboratory
- * Year         : 2025
- * Program Ver  : 1.0
- * 
- * PIN CONFIGURATION
- * 1. Push Button Up    -> GPIO Pin 5
- * 2. Push Button Down  -> GPIO Pin 3
- * 3. Push Button OK    -> GPIO Pin 15
- * 4. Push Button Run   -> GPIO Pin 12
- * 4. LED BUILTIN       -> GPIO Pin 2
- * 5. Encoder 1A        -> GPIO Pin 36
- * 6. Encoder 1B        -> GPIO Pin 39
- * 7. Encoder 2A        -> GPIO Pin 34
- * 8. Encoder 2B        -> GPIO Pin 35
- * 9. Encoder 3A        -> GPIO Pin 32
- * 10. Encoder 3B       -> GPIO Pin 33  
- * 11. Encoder 4A       -> GPIO Pin 25
- * 12. Encoder 4B       -> GPIO Pin 26
- */
-
 #include <SPI.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
@@ -40,18 +13,18 @@
 #define PUSH_BUTTON_UP_IS_PRESSED   digitalRead(PB_UP) == LOW
 #define PUSH_BUTTON_RUN_IS_PRESSED  digitalRead(PB_RUN) == LOW
 
-#define NUM_OF_DATA 4
-#define NUM_OF_MOTORS 4
-#define NUM_OF_ENCODER 4
-#define ENCODER_PPR 11
-#define R_WHEEL 0.03
-#define R_ROBOT 0.1
+#define NUM_OF_DATA     4
+#define NUM_OF_MOTORS   4
+#define NUM_OF_ENCODER  4
+#define ENCODER_PPR     11
+#define R_WHEEL         0.03
+#define R_ROBOT         0.1
 
 #define OFFSET_HEADING 45   // Posisi roda 1 berada pada sudut 45 derajat dari sumbu x sehingga arah hadap robot berada pada sumbu y (konfigurasi frame robot X)
 
-#define PI 3.14159265359
-#define CW 0
-#define CCW 1
+#define PI    3.14159265359
+#define CW    0
+#define CCW   1
 
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 32
@@ -66,13 +39,12 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 HardwareSerial SlaveSerial2(2);
 
 volatile int16_t encoder_cnt[NUM_OF_MOTORS];
-int16_t encoder_prev_cnt[NUM_OF_MOTORS];
-int16_t encoder_last_cnt[NUM_OF_MOTORS];
-int16_t encoder_velocity[NUM_OF_MOTORS];
+volatile int16_t encoder_prev_cnt[NUM_OF_MOTORS];
+volatile int16_t encoder_last_cnt[NUM_OF_MOTORS];
+volatile int16_t encoder_RPM[NUM_OF_MOTORS];
 
-float speed_motor_encoder[NUM_OF_MOTORS];
 float setPoint_velocity[NUM_OF_MOTORS];
-float setPoint_motor[NUM_OF_MOTORS];
+float setPoint_RPM[NUM_OF_MOTORS];
 float error[NUM_OF_MOTORS];
 float lastError[NUM_OF_MOTORS];
 
@@ -81,9 +53,8 @@ float I[NUM_OF_MOTORS];
 float D[NUM_OF_MOTORS];
 float PIDForRPM[NUM_OF_MOTORS];
 
-float KP[NUM_OF_MOTORS];
-float KI[NUM_OF_MOTORS];
-float KD[NUM_OF_MOTORS];
+float min_rpm = 0;
+float max_rpm = 0;
 
 float motor_p;
 float motor_i;
@@ -146,16 +117,6 @@ float KD_odom;
 float PID_odom;
 
 bool statusWaypointReached = false;
-
-#define NUM_OF_WAYPOINTS 2
-float robotWaypoint[NUM_OF_WAYPOINTS][4] = {
-  {0.5, 0, 0, 100},
-  {0, 0.5, 0, 50}
-};
-
-/*
- *  Odometry Properties
- */
 
 float RobotSetPointX = 0.0;
 float RobotSetPointY = 0.0;
@@ -278,10 +239,6 @@ float data4;
 
 int UARTStatusDisplay;
 
-hw_timer_t *timer20ms = NULL;
-volatile bool flag_20ms = false;
-void IRAM_ATTR onTimer() {flag_20ms = true;}
-
 TaskHandle_t Task_ReadencoderAll_RPM = NULL;
 void encoderAll_RPM(void *parameter){
   for(;;){
@@ -289,7 +246,7 @@ void encoderAll_RPM(void *parameter){
     if (currentTime - previousTime >= interval){
       previousTime = currentTime;
       for(int i = 0; i < NUM_OF_MOTORS; i++){
-        encoder_velocity[i] = ((encoder_cnt[i] - encoder_prev_cnt[i]) * 60) / ENCODER_PPR;
+        encoder_RPM[i] = ((encoder_cnt[i] - encoder_prev_cnt[i]) * 60) / ENCODER_PPR;
         encoder_prev_cnt[i] = encoder_cnt[i];
       }
     }
@@ -307,18 +264,17 @@ void globalMotorControl(void *parameter){
     }
     
     for (int i = 0; i < NUM_OF_MOTORS; i++){    
-     
-      error[i] = (setPoint_velocity[i] - encoder_velocity[i]);
+      error[i] = (setPoint_RPM[i] - encoder_RPM[i]);
       P[i] = (float)(error[i] * motor_p);
       I[i] += error[i] * motor_i;
       D[i] = (error[i] - lastError[i]) * motor_d;
       PIDForRPM[i] = P[i] + I[i] + D[i];
+
+      if (I[i] > motor_pid_max) I[i] = motor_pid_max;
+      if (I[i] < motor_pid_min) I[i] = motor_pid_min;
       
       if (PIDForRPM[i] > motor_pid_max) PIDForRPM[i] = motor_pid_max;
       if (PIDForRPM[i] < motor_pid_min) PIDForRPM[i] = motor_pid_min;
-      
-      if (I[i] > motor_pid_max) I[i] = motor_pid_max;
-      if (I[i] < motor_pid_min) I[i] = motor_pid_min;
 
       if (error[i] == 0) I[i] = 0;
       
@@ -399,20 +355,6 @@ void globalPositionControl(void *parameter){
     VelocityRobotZ = 0;
     
     setRobotSpeed(VelocityRobotX, VelocityRobotY, VelocityRobotZ);
-    
-//    if (TotalDistanceTravelledByRobot < 0.01f){
-//      if (currentWaypointIndex < NUM_OF_WAYPOINTS - 1) {
-//        currentWaypointIndex++;   // pindah ke waypoint berikutnya
-//      } 
-      
-//      else {
-//        // sudah di waypoint terakhir → stop
-//        VelocityRobotX = 0;
-//        VelocityRobotY = 0;
-//        VelocityRobotZ = 0;
-//        setRobotSpeed(VelocityRobotX, VelocityRobotY, VelocityRobotZ);
-//      }
-//    }
     vTaskDelay(20 / portTICK_PERIOD_MS);
   }
 }
@@ -431,51 +373,6 @@ void setup() {
   pinMode(PB_UP, INPUT_PULLUP);
   pinMode(PB_DOWN, INPUT_PULLUP);
   pinMode(PB_OK, INPUT_PULLUP);
-
-  timer20ms = timerBegin(0, 80, true);
-  timerAttachInterrupt(timer20ms, &onTimer, true);
-  timerAlarmWrite(timer20ms, 20000, true);
-  timerAlarmEnable(timer20ms);
-
-  xTaskCreatePinnedToCore(
-    encoderAll_RPM,               // Task function
-    "encoderAll_RPM",             // Task name
-    4096,                        // Stack size (bytes)
-    NULL,                         // Parameters
-    1,                            // Priority
-    &Task_ReadencoderAll_RPM,     // Task handle
-    0                             // Core
-  );
-
-  xTaskCreatePinnedToCore(
-    globalMotorControl,              // Task function
-    "globalMotorControl",            // Task name
-    4096,                        // Stack size (bytes)
-    NULL,                         // Parameters
-    1,                            // Priority
-    &Task_globalMotorControl,        // Task handle
-    0                             // Core 1
-  );
-
-  xTaskCreatePinnedToCore(
-    odometryTimerLoop,            // Task function
-    "odometryTimerLoop",          // Task name
-    4096,                        // Stack size (bytes)
-    NULL,                         // Parameters
-    1,                            // Priority
-    &Task_odometryTimerLoop,      // Task handle
-    0                             // Core 1
-  );
-
-  xTaskCreatePinnedToCore(
-    globalPositionControl,            // Task function
-    "globalPositionControl",          // Task name
-    4096,                        // Stack size (bytes)
-    NULL,                         // Parameters
-    1,                            // Priority
-    &Task_globalPositionControl,      // Task handle
-    0                             // Core 1
-  );
 
   ledcSetup(pwmChannel1, frequency, resolution);
   ledcAttachPin(PIN_MOT_1A, pwmChannel1); 
@@ -510,11 +407,52 @@ void setup() {
     for(;;);
   }
 
+  xTaskCreatePinnedToCore(
+    encoderAll_RPM,               // Task function
+    "encoderAll_RPM",             // Task name
+    4096,                         // Stack size (bytes)
+    NULL,                         // Parameters
+    1,                            // Priority
+    &Task_ReadencoderAll_RPM,     // Task handle
+    0                             // Core 0
+  );
+
+  xTaskCreatePinnedToCore(
+    globalMotorControl,           // Task function
+    "globalMotorControl",         // Task name
+    4096,                         // Stack size (bytes)
+    NULL,                         // Parameters
+    1,                            // Priority
+    &Task_globalMotorControl,     // Task handle
+    0                             // Core 0
+  );
+
+  xTaskCreatePinnedToCore(
+    odometryTimerLoop,            // Task function
+    "odometryTimerLoop",          // Task name
+    4096,                         // Stack size (bytes)
+    NULL,                         // Parameters
+    1,                            // Priority
+    &Task_odometryTimerLoop,      // Task handle
+    0                             // Core 0
+  );
+
+  xTaskCreatePinnedToCore(
+    globalPositionControl,        // Task function
+    "globalPositionControl",      // Task name
+    4096,                         // Stack size (bytes)
+    NULL,                         // Parameters
+    1,                            // Priority
+    &Task_globalPositionControl,  // Task handle
+    0                             // Core 0
+  );
+
   SetPIDMinMax(-255, 255);
   SetPIDGainYaw(10, 0, 5);
   
-  enableMotorControl = true;
-  SetPIDMotor(0.01, 0.1, 0.001);
+  enableMotorControl = false;
+  SetPIDMotor(0.5, 0.1, 0);
+  SetRPMMinMax(-200, 200);
   
   enablePositionControl = true;
   SetPIDGainOdomRobot(50,0,0);
@@ -525,15 +463,13 @@ void setup() {
 }
 
 void loop() {
-//  setRobotPosition(0.5, 0.5, 0, 100, 100);
-//  Serial << RobotSetPointX << " " << RobotActualPositionX << " " << errorPosXAxis << " " << TotalDistanceTravelledByRobot << " " << PID_velocity << " " << VelocityRobotX << " " << setPoint_motor[0] << "\n";
-//  setRobotSpeed(50,0,0);
-  while (menu == 0) {RobotHomeScreen();}
-  while (menu == 1) {RobotMenuEncoder();}
-  while (menu == 2) {RobotMenuMotor();}
+  // while (menu == 0) {RobotHomeScreen();}
+  // while (menu == 1) {RobotMenuEncoder();}
+  // while (menu == 2) {RobotMenuMotor();}
 
-  while (menu == 6) {RobotOdometry();}
-  while (menu == 7) {RobotHoldPosition();}
-  while (menu == 8) {RobotJoystickControl();}
-  while (menu == 9) {RobotOdometry();}
+  // while (menu == 6) {RobotOdometry();}
+  // while (menu == 7) {RobotHoldPosition();}
+  // while (menu == 8) {RobotJoystickControl();}
+  // while (menu == 9) {RobotOdometry();}
+  SetMotorRPM(5,5,5,5);
 }

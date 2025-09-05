@@ -30,7 +30,7 @@ void encoder1_RPM(){
   currentTime = millis();
   if (currentTime - previousTime >= interval){
     previousTime = currentTime;
-    encoder_velocity[0] = ((encoder_cnt[0] - encoder_prev_cnt[0]) * 60) / ENCODER_PPR;
+    encoder_RPM[0] = ((encoder_cnt[0] - encoder_prev_cnt[0]) * 60) / ENCODER_PPR;
     encoder_prev_cnt[0] = encoder_cnt[0];
   }
 }
@@ -39,7 +39,7 @@ void encoder2_RPM(){
   currentTime = millis();
   if (currentTime - previousTime >= interval){
     previousTime = currentTime;
-    encoder_velocity[1] = ((encoder_cnt[1] - encoder_prev_cnt[1]) * 60) / ENCODER_PPR;
+    encoder_RPM[1] = ((encoder_cnt[1] - encoder_prev_cnt[1]) * 60) / ENCODER_PPR;
     encoder_prev_cnt[1] = encoder_cnt[1];
   }
 }
@@ -48,7 +48,7 @@ void encoder3_RPM(){
   currentTime = millis();
   if (currentTime - previousTime >= interval){
     previousTime = currentTime;
-    encoder_velocity[2] = ((encoder_cnt[2] - encoder_prev_cnt[2]) * 60) / ENCODER_PPR;
+    encoder_RPM[2] = ((encoder_cnt[2] - encoder_prev_cnt[2]) * 60) / ENCODER_PPR;
     encoder_prev_cnt[2] = encoder_cnt[2];
   }
 }
@@ -57,7 +57,7 @@ void encoder4_RPM(){
   currentTime = millis();
   if (currentTime - previousTime >= interval){
     previousTime = currentTime;
-    encoder_velocity[3] = ((encoder_cnt[3] - encoder_prev_cnt[3]) * 60) / ENCODER_PPR;
+    encoder_RPM[3] = ((encoder_cnt[3] - encoder_prev_cnt[3]) * 60) / ENCODER_PPR;
     encoder_prev_cnt[3] = encoder_cnt[3];
   }
 }
@@ -68,7 +68,7 @@ void encoder4_RPM(){
 //    if (currentTime - previousTime >= interval){
 //      previousTime = currentTime;
 //      for(int i = 0; i < NUM_OF_MOTORS; i++){
-//        encoder_velocity[i] = ((encoder_cnt[i] - encoder_prev_cnt[i]) * 60) / ENCODER_PPR;
+//        encoder_RPM[i] = ((encoder_cnt[i] - encoder_prev_cnt[i]) * 60) / ENCODER_PPR;
 //        encoder_prev_cnt[i] = encoder_cnt[i];
 //      }
 //    }
