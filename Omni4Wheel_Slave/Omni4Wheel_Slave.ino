@@ -471,5 +471,10 @@ void loop() {
   // while (menu == 7) {RobotHoldPosition();}
   // while (menu == 8) {RobotJoystickControl();}
   // while (menu == 9) {RobotOdometry();}
-  SetMotorRPM(5,5,5,5);
+
+  Serial.print(encoder_RPM[0]); Serial.print("\t");
+  Serial.print(encoder_RPM[1]); Serial.print("\t");
+  Serial.print(encoder_RPM[2]); Serial.print("\t");
+  Serial.print(encoder_RPM[3]); Serial.print("\t");
+  Serial.println();
 }
