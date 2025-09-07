@@ -56,9 +56,9 @@ float PIDForRPM[NUM_OF_MOTORS];
 float min_rpm = 0;
 float max_rpm = 0;
 
-float motor_p;
-float motor_i;
-float motor_d;
+float motor_p = 0;
+float motor_i = 0;
+float motor_d = 0;
 
 float motor_pid_min;
 float motor_pid_max;
@@ -332,15 +332,26 @@ void globalPositionControl(void *parameter){
     errorPosYAxis = RobotSetPointY - RobotActualPositionY;
     errorPosTheta = RobotSetPointTheta - RobotActualPositionTheta;
 
-    if (errorPosTheta > 180){errorPosTheta = errorPosTheta - 360;}
-    else if (errorPosTheta < -180){errorPosTheta = errorPosTheta + 360;}
+    if      (errorPosTheta > 180)   {errorPosTheta = errorPosTheta - 360;}
+    else if (errorPosTheta < -180)  {errorPosTheta = errorPosTheta + 360;}
 
     TotalDistanceTravelledByRobot = sqrt((errorPosXAxis*errorPosXAxis) + (errorPosYAxis*errorPosYAxis));
 
-    P_odom = KP_odom * TotalDistanceTravelledByRobot;
-    PID_velocity = P_odom;
+    P_xAxis = KP_xAxis * errorPosXAxis;
+    I_xAxis += errorPosXAxis * KI_xAxis;
+    D_xAxis = (lastErrorPosXAxis - errorPosXAxis) * KD_xAxis;
+    PID_xAxis = P_xAxis + I_xAxis + D_xAxis;
 
-    if (PID_velocity > maxSpeedRobotLin) PID_velocity = maxSpeedRobotLin;
+    if (PID_xAxis > maxSpeedRobotLin) PID_xAxis = maxSpeedRobotLin;
+    if (PID_xAxis < -maxSpeedRobotLin) PID_xAxis = -maxSpeedRobotLin;
+
+    P_yAxis = KP_yAxis * errorPosXAxis;
+    I_yAxis += errorPosYAxis * KI_yAxis;
+    D_yAxis = (lastErrorPosYAxis - errorPosYAxis) * KD_yAxis;
+    PID_yAxis = P_yAxis + I_yAxis + D_yAxis;
+
+    if (PID_yAxis > maxSpeedRobotLin) PID_yAxis = maxSpeedRobotLin;
+    if (PID_yAxis < -maxSpeedRobotLin) PID_yAxis = -maxSpeedRobotLin;
 
     P_theta = KP_theta * errorPosTheta;
     I_theta = I_theta + errorPosTheta * KI_theta;
@@ -350,19 +361,13 @@ void globalPositionControl(void *parameter){
     if(PID_theta > maxSpeedRobotAng) PID_theta = maxSpeedRobotAng;
     if(PID_theta < -maxSpeedRobotAng) PID_theta = -maxSpeedRobotAng;
 
-    VelocityRobotX = PID_velocity * errorPosXAxis / TotalDistanceTravelledByRobot;
-    VelocityRobotY = PID_velocity * errorPosYAxis / TotalDistanceTravelledByRobot;
+    VelocityRobotX = PID_xAxis * errorPosXAxis / TotalDistanceTravelledByRobot;
+    VelocityRobotY = PID_yAxis * errorPosYAxis / TotalDistanceTravelledByRobot;
     VelocityRobotZ = 0;
     
     setRobotSpeed(VelocityRobotX, VelocityRobotY, VelocityRobotZ);
     vTaskDelay(20 / portTICK_PERIOD_MS);
   }
-}
-
-template<class T>
-inline Print &operator<<(Print &obj, T arg) {
-  obj.print(arg);
-  return obj;
 }
 
 void setup() {
@@ -407,6 +412,22 @@ void setup() {
     for(;;);
   }
 
+  SetPIDMinMax(-255, 255);
+  SetPIDGainYaw(10, 0, 5);
+  
+  enableMotorControl = true;
+  SetPIDMotor(0.5, 0.1, 0);
+  SetRPMMinMax(-200, 200);
+  
+  enablePositionControl = true;
+  SetPIDGainOdomX(100, 0, 0);
+  SetPIDGainOdomY(100, 0, 0);
+  SetPIDGainOdomRobot(50,0,0);
+  
+  for(int i = 0; i < NUM_OF_MOTORS; i++){encoder_cnt[i] = 0;}
+  previousTime_odom = millis();
+  RobotBootScreen();
+
   xTaskCreatePinnedToCore(
     encoderAll_RPM,               // Task function
     "encoderAll_RPM",             // Task name
@@ -446,20 +467,6 @@ void setup() {
     &Task_globalPositionControl,  // Task handle
     0                             // Core 0
   );
-
-  SetPIDMinMax(-255, 255);
-  SetPIDGainYaw(10, 0, 5);
-  
-  enableMotorControl = false;
-  SetPIDMotor(0.5, 0.1, 0);
-  SetRPMMinMax(-200, 200);
-  
-  enablePositionControl = true;
-  SetPIDGainOdomRobot(50,0,0);
-  
-  for(int i = 0; i < NUM_OF_MOTORS; i++){encoder_cnt[i] = 0;}
-  previousTime_odom = millis();
-  RobotBootScreen();
 }
 
 void loop() {
@@ -471,10 +478,6 @@ void loop() {
   // while (menu == 7) {RobotHoldPosition();}
   // while (menu == 8) {RobotJoystickControl();}
   // while (menu == 9) {RobotOdometry();}
-
-  Serial.print(encoder_RPM[0]); Serial.print("\t");
-  Serial.print(encoder_RPM[1]); Serial.print("\t");
-  Serial.print(encoder_RPM[2]); Serial.print("\t");
-  Serial.print(encoder_RPM[3]); Serial.print("\t");
-  Serial.println();
+  setRobotPosition(0, 0.5, 0, 200, 200);
+  Serial.print(TotalDistanceTravelledByRobot); Serial.print(" "); Serial.print(errorPosXAxis); Serial.print(" "); Serial.print(errorPosYAxis); Serial.print(" "); Serial.print(PID_xAxis); Serial.print(" "); Serial.print(PID_yAxis);
 }
