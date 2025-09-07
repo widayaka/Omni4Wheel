@@ -420,8 +420,8 @@ void setup() {
   SetRPMMinMax(-200, 200);
   
   enablePositionControl = true;
-  SetPIDGainOdomX(100, 0, 0);
-  SetPIDGainOdomY(100, 0, 0);
+  SetPIDGainOdomX(100, 0, 0.5);
+  SetPIDGainOdomY(100, 0, 0.5);
   SetPIDGainOdomRobot(50,0,0);
   
   for(int i = 0; i < NUM_OF_MOTORS; i++){encoder_cnt[i] = 0;}
@@ -478,6 +478,4 @@ void loop() {
   // while (menu == 7) {RobotHoldPosition();}
   // while (menu == 8) {RobotJoystickControl();}
   // while (menu == 9) {RobotOdometry();}
-  setRobotPosition(0, 0.5, 0, 200, 200);
-  Serial.print(TotalDistanceTravelledByRobot); Serial.print(" "); Serial.print(errorPosXAxis); Serial.print(" "); Serial.print(errorPosYAxis); Serial.print(" "); Serial.print(PID_xAxis); Serial.print(" "); Serial.print(PID_yAxis);
 }
