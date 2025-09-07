@@ -20,7 +20,7 @@
 #define R_WHEEL         0.03
 #define R_ROBOT         0.1
 
-#define OFFSET_HEADING 45   // Posisi roda 1 berada pada sudut 45 derajat dari sumbu x sehingga arah hadap robot berada pada sumbu y (konfigurasi frame robot X)
+#define OFFSET_HEADING 45
 
 #define PI    3.14159265359
 #define CW    0
@@ -416,7 +416,7 @@ void setup() {
   SetPIDGainYaw(10, 0, 5);
   
   enableMotorControl = true;
-  SetPIDMotor(0.5, 0.1, 0);
+  SetPIDMotor(0.5, 0.25, 0);
   SetRPMMinMax(-200, 200);
   
   enablePositionControl = true;
@@ -478,4 +478,16 @@ void loop() {
   // while (menu == 7) {RobotHoldPosition();}
   // while (menu == 8) {RobotJoystickControl();}
   // while (menu == 9) {RobotOdometry();}
+  drive(1, 0, 0, OFFSET_HEADING, NUM_OF_MOTORS, R_WHEEL, R_ROBOT, setPoint_RPM);
+  Serial.print(setPoint_RPM[0]);  Serial.print(" ");
+  Serial.print(setPoint_RPM[1]);  Serial.print(" ");
+  Serial.print(setPoint_RPM[2]);  Serial.print(" ");
+  Serial.print(setPoint_RPM[3]);  Serial.print(" ");
+
+  Serial.print(encoder_RPM[0]);  Serial.print(" ");
+  Serial.print(encoder_RPM[1]);  Serial.print(" ");
+  Serial.print(encoder_RPM[2]);  Serial.print(" ");
+  Serial.print(encoder_RPM[3]);  Serial.print(" ");
+  
+  Serial.println();
 }
